@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block title %}Dr. {{ doctor.user.get_full_name }} — MediCare{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <a href="{% url 'doctor_list' %}" class="btn btn-outline-info btn-sm mb-4">
+        <i class="bi bi-arrow-left me-1"></i>All Doctors
+    </a>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="cine-glass p-4 text-center cine-reveal">
+                {% if doctor.user.profile_picture %}
+                <img src="{{ doctor.user.profile_picture.url }}" class="rounded-circle mb-3"
+                    style="width:140px;height:140px;object-fit:cover;" alt="{{ doctor.user.get_full_name }}">
+                {% else %}
+                <div class="rounded-circle bg-info bg-opacity-25 d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width:140px;height:140px;">
+                    <i class="bi bi-person-fill" style="font-size:4rem;color:#22d3ee;"></i>
+                </div>
+                {% endif %}
+                <h4 class="text-white fw-bold mb-1">Dr. {{ doctor.user.get_full_name }}</h4>
+                <p class="small mb-2" style="color:#22d3ee;">{{ doctor.specialization|default:doctor.qualification }}
+                </p>
+                <p class="small mb-3" style="color:#8aa1bd;">
+                    <i class="bi bi-building me-1"></i>{{ doctor.department.name|default:"General" }}
+                </p>
+                <div class="d-flex justify-content-center gap-3 mb-3 small">
+                    <div>
+                        <div class="text-white fw-bold">{{ doctor.experience }}+</div>
+                        <div style="color:#8aa1bd;">Years</div>
+                    </div>
+                    <div>
+                        <div class="text-white fw-bold" style="color:#fbbf24;">
+                            <i class="bi bi-star-fill"></i> {{ doctor.average_rating|floatformat:1 }}
+                        </div>
+                        <div style="color:#8aa1bd;">Rating</div>
+                    </div>
+                    <div>
+                        <div class="text-white fw-bold">${{ doctor.consultation_fee|floatformat:0 }}</div>
+                        <div style="color:#8aa1bd;">Fee</div>
+                    </div>
+                </div>
+                <span class="badge {% if doctor.is_available %}bg-success{% else %}bg-secondary{% endif %} mb-3">
+                    {% if doctor.is_available %}Available{% else %}Unavailable{% endif %}
+                </span>
+                {% if user.is_authenticated and user.role == 'patient' %}
+                <a href="{% url 'book_appointment' %}" class="btn btn-info text-dark fw-semibold w-100">
+                    <i class="bi bi-calendar-plus me-2"></i>Book Appointment
+                </a>
+                {% elif not user.is_authenticated %}
+                <a href="{% url 'login' %}" class="btn btn-info text-dark fw-semibold w-100">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In to Book
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="cine-glass p-4 mb-4 cine-reveal">
+                <h5 class="fw-semibold mb-3">About</h5>
+                <p style="color:#8aa1bd;">{{ doctor.bio|default:"No biography available." }}</p>
+                <div class="row g-3 mt-2">
+                    <div class="col-sm-6">
+                        <div class="small" style="color:#8aa1bd;">Qualification</div>
+                        <div class="text-white">{{ doctor.qualification }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="small" style="color:#8aa1bd;">License</div>
+                        <div class="text-white">{{ doctor.license_number|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="small" style="color:#8aa1bd;">Working Hours</div>
+                        <div class="text-white">{{ doctor.working_hours_start|time:"H:i" }} – {{ doctor.working_hours_end|time:"H:i" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="small" style="color:#8aa1bd;">Max Patients / Day</div>
+                        <div class="text-white">{{ doctor.max_patients_per_day }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cine-glass p-4 mb-4 cine-reveal">
+                <h5 class="fw-semibold mb-3">Available Time Slots</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for slot in available_slots %}
+                    <span class="badge bg-info bg-opacity-25 text-info px-3 py-2">
+                        <i class="bi bi-clock me-1"></i>{{ slot }}
+                    </span>
+                    {% empty %}
+                    <p class="small mb-0" style="color:#8aa1bd;">No slots available today.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="cine-glass p-4 cine-reveal">
+                <h5 class="fw-semibold mb-3">Patient Reviews</h5>
+                {% for review in reviews %}
+                <div class="border-bottom border-secondary border-opacity-25 py-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-white small fw-semibold">{{
+                            review.patient.user.get_full_name|default:"Anonymous" }}</span>
+                        <span class="small" style="color:#fbbf24;">
+                            {% for _ in ""|ljust:review.rating %}<i class="bi bi-star-fill"></i>{% endfor %}
+                        </span>
+                    </div>
+                    {% if review.review %}
+                    <p class="small mb-0" style="color:#8aa1bd;">{{ review.review }}</p>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="small mb-0" style="color:#8aa1bd;">No reviews yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

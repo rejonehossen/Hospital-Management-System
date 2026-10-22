@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Inventory — MediCare{% endblock %}
+{% block body %}
+<div class="d-flex">
+  {% include 'partials/sidebar.html' %}
+  <div class="flex-grow-1">
+    {% include 'partials/navbar.html' %}
+    <main class="p-4" data-cine-page>
+      {% include 'partials/messages.html' %}
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">{% include 'partials/stat_card.html' with icon="box-seam" label="Total Items" value=items.count %}</div>
+        <div class="col-md-4">{% include 'partials/stat_card.html' with icon="exclamation-triangle" label="Low Stock Alerts" value=low_stock_count %}</div>
+        <div class="col-md-4">{% include 'partials/stat_card.html' with icon="cash-stack" label="Total Value" value=total_value prefix="$" decimals=2 %}</div>
+      </div>
+
+      <div class="cine-glass p-4 cine-reveal">
+        <table class="table cine-table">
+          <thead><tr><th>Item</th><th>Category</th><th>Quantity</th><th>Price</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td class="text-white">{{ item.name }}</td>
+              <td style="color:#8aa1bd;">{{ item.get_category_display }}</td>
+              <td class="{% if item.needs_reorder %}text-warning fw-bold{% else %}text-white{% endif %}">{{ item.quantity }}</td>
+              <td style="color:#10b981;">${{ item.unit_price }}</td>
+              <td>{% if item.needs_reorder %}<span class="badge bg-danger">Reorder</span>{% else %}<span class="badge bg-success">Good</span>{% endif %}</td>
+            </tr>
+            {% empty %}<tr><td colspan="5" class="text-center py-4" style="color:#8aa1bd;">No items in inventory.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

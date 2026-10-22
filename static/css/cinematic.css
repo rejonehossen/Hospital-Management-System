@@ -1,0 +1,298 @@
+/* =====================================================
+   CINEMATIC.CSS — Minimal custom CSS for effects that
+   Bootstrap 5 fundamentally cannot do:
+   - Glass panel gradients with layered translucency
+   - Perspective 3D card tilt
+   - Neon glow / text-shadow
+   - Cinematic intro overlay
+   Everything else uses Bootstrap 5 utilities.
+   ===================================================== */
+
+:root {
+    --cine-bg-0: #05070f;
+    --cine-bg-1: #0a1020;
+    --cine-bg-2: #0f1a2e;
+    --cine-cyan: #22d3ee;
+    --cine-ice: #a5f3fc;
+    --cine-teal: #14b8a6;
+    --cine-violet: #8b5cf6;
+    --cine-emerald: #10b981;
+    --cine-text: #e6f4ff;
+    --cine-muted: #8aa1bd;
+}
+
+body.cine-body {
+    background: radial-gradient(ellipse at 20% 0%, #0d1b33 0%, #05070f 55%, #02030a 100%);
+    color: var(--cine-text);
+    min-height: 100vh;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow-x: hidden;
+}
+
+/* ---------- Glass Panel ---------- */
+.cine-glass {
+    background: linear-gradient(145deg, rgba(22, 36, 60, 0.72), rgba(10, 16, 30, 0.55));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(34, 211, 238, 0.16);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+.cine-glass:hover {
+    border-color: rgba(34, 211, 238, 0.4);
+    box-shadow: 0 12px 44px rgba(34, 211, 238, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- Neon glow ---------- */
+.cine-glow {
+    text-shadow: 0 0 12px rgba(34, 211, 238, 0.55), 0 0 32px rgba(34, 211, 238, 0.25);
+}
+
+.cine-glow-violet {
+    text-shadow: 0 0 14px rgba(139, 92, 246, 0.55), 0 0 34px rgba(139, 92, 246, 0.25);
+}
+
+.cine-ring {
+    box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.28), 0 0 24px rgba(34, 211, 238, 0.18);
+}
+
+/* ---------- Gradient text ---------- */
+.cine-grad-text {
+    background: linear-gradient(90deg, #a5f3fc 0%, #22d3ee 40%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* ---------- 3D tilt container ---------- */
+.cine-tilt-wrap {
+    perspective: 1200px;
+}
+
+.cine-tilt {
+    transform-style: preserve-3d;
+    transition: transform 0.2s ease-out;
+    will-change: transform;
+}
+
+/* ---------- Cinematic intro overlay ---------- */
+#cine-intro {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: radial-gradient(ellipse at center, #0a1a2f 0%, #02030a 70%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: opacity 0.9s ease, visibility 0.9s ease;
+}
+
+#cine-intro.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#cine-intro-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.cine-intro-brand {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1.2s ease 0.4s, transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s;
+}
+
+#cine-intro.is-revealing .cine-intro-brand {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ---------- 3D hero canvas ---------- */
+.cine-hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.cine-hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* ---------- Scrolling particle backdrop ---------- */
+.cine-particle-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* ---------- Scroll reveal base state (JS adds .is-visible) ---------- */
+.cine-reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.cine-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ---------- Sidebar (dashboard) ---------- */
+.cine-sidebar {
+    background: linear-gradient(180deg, rgba(11, 20, 38, 0.96) 0%, rgba(5, 9, 18, 0.98) 100%);
+    border-right: 1px solid rgba(34, 211, 238, 0.14);
+    min-height: 100vh;
+    width: 264px;
+}
+
+.cine-sidebar .nav-link {
+    color: var(--cine-muted);
+    border-radius: 0.6rem;
+    padding: 0.65rem 0.9rem;
+    margin-bottom: 0.15rem;
+    transition: background 0.25s ease, color 0.25s ease, padding-left 0.25s ease;
+}
+
+.cine-sidebar .nav-link:hover {
+    color: #fff;
+    background: rgba(34, 211, 238, 0.08);
+    padding-left: 1.15rem;
+}
+
+.cine-sidebar .nav-link.active {
+    color: #fff;
+    background: linear-gradient(90deg, rgba(34, 211, 238, 0.22), rgba(139, 92, 246, 0.12));
+    border-left: 3px solid var(--cine-cyan);
+}
+
+/* ---------- Navbar ---------- */
+.cine-navbar {
+    background: linear-gradient(90deg, rgba(5, 9, 18, 0.85), rgba(11, 20, 38, 0.9));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(34, 211, 238, 0.12);
+}
+
+/* ---------- Data visualization bars ---------- */
+.cine-bar {
+    background: linear-gradient(90deg, var(--cine-cyan), var(--cine-violet));
+    border-radius: 4px;
+    height: 8px;
+    transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------- Stat counter ---------- */
+.cine-stat-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* ---------- Loading shimmer for tables ---------- */
+.cine-skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
+    background-size: 200% 100%;
+    animation: cine-shimmer 1.4s infinite;
+    border-radius: 4px;
+}
+
+@keyframes cine-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ---------- Respect reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+
+    .cine-reveal,
+    .cine-glass,
+    .cine-tilt {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .cine-skeleton {
+        animation: none;
+    }
+}
+
+/* ---------- Table tweaks ---------- */
+.table.cine-table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--cine-text);
+    --bs-table-border-color: rgba(34, 211, 238, 0.12);
+    --bs-table-hover-bg: rgba(34, 211, 238, 0.06);
+    --bs-table-hover-color: #fff;
+}
+
+.table.cine-table thead th {
+    color: var(--cine-muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ---------- Form controls on dark bg ---------- */
+.cine-form .form-control,
+.cine-form .form-select {
+    background-color: rgba(11, 20, 38, 0.6);
+    border: 1px solid rgba(34, 211, 238, 0.18);
+    color: var(--cine-text);
+}
+
+.cine-form .form-control:focus,
+.cine-form .form-select:focus {
+    background-color: rgba(11, 20, 38, 0.85);
+    border-color: var(--cine-cyan);
+    color: #fff;
+    box-shadow: 0 0 0 0.2rem rgba(34, 211, 238, 0.2);
+}
+
+.cine-form .form-label {
+    color: var(--cine-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.cine-form .form-text {
+    color: var(--cine-muted);
+}
+
+/* ---------- Modal on dark bg ---------- */
+.modal.cine-modal .modal-content {
+    background: linear-gradient(145deg, rgba(22, 36, 60, 0.98), rgba(10, 16, 30, 0.98));
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    color: var(--cine-text);
+}
+
+.modal.cine-modal .modal-header,
+.modal.cine-modal .modal-footer {
+    border-color: rgba(34, 211, 238, 0.15);
+}
+
+.modal.cine-modal .btn-close {
+    filter: invert(1) brightness(1.4);
+}

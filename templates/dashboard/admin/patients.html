@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Patients — MediCare Admin{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="d-flex justify-content-between align-items-center mb-4 cine-reveal">
+                <div>
+                    <h2 class="fw-bold mb-1">Patient <span class="cine-grad-text">Records</span></h2>
+                    <p class="mb-0 small" style="color:#8aa1bd;">{{ stats.total }} patients &middot; {{ stats.new_today }} new today</p>
+                </div>
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-info btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                </a>
+            </div>
+
+            <!-- Filter -->
+            <div class="cine-glass p-3 mb-4 cine-reveal">
+                <form method="get" class="row g-2 align-items-end cine-form">
+                    <div class="col-md-3">
+                        <label class="form-label small">Search</label>
+                        <input type="text" name="search" class="form-control form-control-sm" value="{{ search_query }}"
+                            placeholder="Name, email, phone">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Gender</label>
+                        <select name="gender" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="M" {% if "M" in gender_filter %}selected{% endif %}>Male</option>
+                            <option value="F" {% if "F" in gender_filter %}selected{% endif %}>Female</option>
+                            <option value="O" {% if "O" in gender_filter %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Blood Group</label>
+                        <select name="blood_group" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            {% for bg in blood_groups %}
+                            <option value="{{ bg }}" {% if bg in blood_group_filter %}selected{% endif %}>{{ bg }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Age Min</label>
+                        <input type="number" name="age_min" class="form-control form-control-sm" value="{{ age_min_filter }}" placeholder="0">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Age Max</label>
+                        <input type="number" name="age_max" class="form-control form-control-sm" value="{{ age_max_filter }}" placeholder="150">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Table -->
+            <div class="cine-glass p-4 cine-reveal">
+                <div class="table-responsive">
+                    <table class="table cine-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th>Blood</th>
+                                <th>Phone</th>
+                                <th>Registered</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in patients %}
+                            <tr>
+                                <td class="text-white">{{ p.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">{{ p.age }}</td>
+                                <td style="color:#8aa1bd;">{{ p.get_gender_display }}</td>
+                                <td>
+                                    {% if p.blood_group %}
+                                    <span class="badge bg-danger bg-opacity-25 text-danger">{{ p.blood_group }}</span>
+                                    {% else %}<span style="color:#8aa1bd;">—</span>{% endif %}
+                                </td>
+                                <td style="color:#8aa1bd;">{{ p.user.phone|default:"—" }}</td>
+                                <td style="color:#8aa1bd;">{{ p.registration_date|date:"M d, Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4" style="color:#8aa1bd;">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>No patients found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if patients.has_other_pages %}
+                <nav class="mt-4" aria-label="Patient pagination">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if patients.has_previous %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ patients.previous_page_number }}&search={{ search_query }}">&laquo;</a>
+                        </li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link bg-info text-dark border-info">{{ patients.number }} / {{ patients.paginator.num_pages }}</span></li>
+                        {% if patients.has_next %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ patients.next_page_number }}&search={{ search_query }}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

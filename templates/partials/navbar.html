@@ -1,0 +1,52 @@
+<nav class="navbar navbar-expand-lg cine-navbar sticky-top py-3">
+    <div class="container">
+        <a class="navbar-brand fw-bold cine-grad-text d-flex align-items-center gap-2" href="{% url 'home' %}">
+            <i class="bi bi-heart-pulse-fill cine-glow" style="color:#22d3ee;"></i>
+            <span>MediCare</span>
+        </a>
+        <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse"
+            data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-list fs-2"></i>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link text-light" href="{% url 'home' %}">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-light" href="{% url 'departments' %}">Departments</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-light" href="{% url 'doctor_list' %}">Doctors</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-light" href="{% url 'about' %}">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-light" href="{% url 'contact' %}">Contact</a>
+                </li>
+            </ul>
+            <div class="d-flex gap-2 align-items-center">
+                {% if user.is_authenticated %}
+                <a href="{% url 'notifications' %}" class="btn btn-outline-info btn-sm position-relative">
+                    <i class="bi bi-bell"></i>
+                    {% if unread_notifications_count %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        {{ unread_notifications_count }}
+                    </span>
+                    {% endif %}
+                </a>
+                <a href="{% url 'dashboard' %}" class="btn btn-info btn-sm text-dark fw-semibold">
+                    <i class="bi bi-grid-1x2 me-1"></i>Dashboard
+                </a>
+                <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+                {% else %}
+                <a href="{% url 'login' %}" class="btn btn-outline-info btn-sm">Sign In</a>
+                <a href="{% url 'register' %}" class="btn btn-info btn-sm text-dark fw-semibold">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>

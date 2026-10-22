@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}Command Center — MediCare Admin{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="d-flex justify-content-between align-items-center mb-4 cine-reveal">
+                <div>
+                    <h2 class="fw-bold mb-1">Medical <span class="cine-grad-text">Command Center</span></h2>
+                    <p class="mb-0 small" style="color:#8aa1bd;">
+                        <i class="bi bi-broadcast me-1"></i>Real-time operational overview
+                    </p>
+                </div>
+                <span class="badge bg-success">
+                    <i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>System Online
+                </span>
+            </div>
+
+            <!-- KPI row -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="people-fill" label="Total Patients" value=total_patients %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="person-badge-fill" label="Active Doctors" value=total_doctors %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="calendar2-check-fill" label="Today's Appointments" value=today_appointments %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="hourglass-split" label="Pending" value=pending_appointments %}
+                </div>
+            </div>
+
+            <!-- Revenue + Monthly -->
+            <div class="row g-3 mb-4">
+                <div class="col-lg-4">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Today's
+                            Revenue</h6>
+                        <h3 class="cine-stat-value mb-3" style="color:#10b981;">
+                            $<span data-cine-count="{{ revenue_paid }}" data-cine-decimals="2">0</span>
+                        </h3>
+                        <div class="small" style="color:#8aa1bd;">
+                            Total billed: ${{ revenue_total|floatformat:2 }}<br>
+                            Outstanding: <span class="text-warning">${{ revenue_due|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">This Month
+                        </h6>
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span style="color:#8aa1bd;">Appointments</span>
+                            <span class="text-white fw-semibold">{{ monthly_stats.appointments }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span style="color:#8aa1bd;">Revenue</span>
+                            <span class="text-white fw-semibold">${{ monthly_stats.revenue_paid|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span style="color:#8aa1bd;">New Patients</span>
+                            <span class="text-white fw-semibold">{{ monthly_stats.new_patients }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Doctors by
+                            Dept</h6>
+                        {% for dept in doctors_by_dept %}
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-white">{{ dept.name }}</span>
+                                <span style="color:#8aa1bd;">{{ dept.total_doctors }}</span>
+                            </div>
+                            <div class="progress" style="height:6px;background:rgba(255,255,255,0.05);">
+                                <div class="progress-bar bg-info"style="width:{% widthratio dept.total_doctors 20 100 %}%"></div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="small" style="color:#8aa1bd;">No data yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Appointments -->
+            <div class="cine-glass p-4 cine-reveal">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-uppercase small mb-0" style="color:#8aa1bd;letter-spacing:.08em;">Recent
+                        Appointments</h6>
+                    <a href="{% url 'manage_appointments' %}" class="btn btn-sm btn-outline-info">View All</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table cine-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt in recent_appointments %}
+                            <tr>
+                                <td class="text-white">{{ appt.patient.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">Dr. {{ appt.doctor.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">{{ appt.date|date:"M d, Y" }}</td>
+                                <td style="color:#8aa1bd;">{{ appt.time|time:"H:i" }}</td>
+                                <td>{% include 'partials/status_badge.html' with status=appt.status %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4" style="color:#8aa1bd;">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>No recent appointments.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

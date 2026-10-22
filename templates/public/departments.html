@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Departments — MediCare{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="text-center mb-5 cine-reveal">
+        <p class="text-uppercase small mb-2 cine-glow" style="color:#22d3ee;letter-spacing:.35em;">Clinical Specialties
+        </p>
+        <h1 class="display-3 fw-bold mb-3">Our <span class="cine-grad-text">Departments</span></h1>
+        <p class="lead mx-auto" style="color:#8aa1bd;max-width:640px;">
+            Specialist care across every discipline, powered by modern diagnostics and evidence-based practice.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        {% for dept in departments %}
+        <div class="col-md-6 col-lg-4">
+            <div class="cine-tilt-wrap">
+                <div class="cine-tilt cine-glass p-4 h-100 cine-reveal">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                            style="width:56px;height:56px;background:rgba(34,211,238,0.12);">
+                            <i class="bi bi-{{ dept.icon|default:'heart-pulse' }} fs-4 cine-glow"
+                                style="color:#22d3ee;"></i>
+                        </div>
+                        <h5 class="mb-0 text-white fw-semibold">{{ dept.name }}</h5>
+                    </div>
+                    <p class="small mb-3" style="color:#8aa1bd;">{{ dept.description|truncatewords:24 }}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-info bg-opacity-25 text-info">
+                            <i class="bi bi-people me-1"></i>{{ dept.doctor_count }} Doctors
+                        </span>
+                        <a href="{% url 'doctor_list' %}?department={{ dept.id }}" class="btn btn-sm btn-outline-info">
+                            View Doctors <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5" style="color:#8aa1bd;">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            No departments yet.
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

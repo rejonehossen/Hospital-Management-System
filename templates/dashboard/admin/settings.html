@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Settings — MediCare Admin{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Hospital <span class="cine-grad-text">Settings</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">Configure system defaults and hospital information.</p>
+            </div>
+
+            <form method="post" class="cine-form">
+                {% csrf_token %}
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="cine-glass p-4 h-100 cine-reveal">
+                            <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">
+                                <i class="bi bi-building me-2"></i>Hospital Info
+                            </h6>
+                            <div class="mb-3">
+                                <label class="form-label">Hospital Name</label>
+                                <input type="text" name="setting_hospital_name" class="form-control"
+                                    value="{{ settings.hospital_name.value|default:'' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Address</label>
+                                <textarea name="setting_hospital_address" class="form-control"
+                                    rows="2">{{ settings.hospital_address.value|default:'' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Phone</label>
+                                <input type="text" name="setting_hospital_phone" class="form-control"
+                                    value="{{ settings.hospital_phone.value|default:'' }}">
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="setting_hospital_email" class="form-control"
+                                    value="{{ settings.hospital_email.value|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="cine-glass p-4 h-100 cine-reveal">
+                            <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">
+                                <i class="bi bi-sliders me-2"></i>Operational Defaults
+                            </h6>
+                            <div class="mb-3">
+                                <label class="form-label">Default Consultation Fee</label>
+                                <input type="number" step="0.01" name="setting_consultation_fee_default"
+                                    class="form-control"
+                                    value="{{ settings.consultation_fee_default.value|default:'' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tax Rate</label>
+                                <input type="number" step="0.01" name="setting_tax_rate" class="form-control"
+                                    value="{{ settings.tax_rate.value|default:'' }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Appointment Reminder (hours before)</label>
+                                <input type="number" name="setting_appointment_reminder_hours" class="form-control"
+                                    value="{{ settings.appointment_reminder_hours.value|default:'' }}">
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label">Max Appointments / Day</label>
+                                <input type="number" name="setting_max_appointments_per_day" class="form-control"
+                                    value="{{ settings.max_appointments_per_day.value|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-info text-dark fw-semibold px-4">
+                        <i class="bi bi-check-circle me-2"></i>Save Settings
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+{% endblock %}

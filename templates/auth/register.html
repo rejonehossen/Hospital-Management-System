@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Register — MediCare{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="cine-glass p-5 cine-reveal">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-plus-fill cine-glow" style="font-size:2.5rem;color:#22d3ee;"></i>
+                    <h2 class="mt-3 fw-bold cine-grad-text">Create Your Account</h2>
+                    <p class="small" style="color:#8aa1bd;">Join the future of medical care.</p>
+                </div>
+                <form method="post" class="cine-form">
+                    {% csrf_token %}
+                    <h6 class="text-info mb-3"><i class="bi bi-person me-2"></i>Account Details</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Username</label>
+                            {{ user_form.username }}
+                            {% if user_form.username.errors %}<div class="text-danger small">{{
+                                user_form.username.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            {{ user_form.email }}
+                            {% if user_form.email.errors %}<div class="text-danger small">{{ user_form.email.errors }}
+                            </div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">First Name</label>
+                            {{ user_form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name</label>
+                            {{ user_form.last_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            {{ user_form.phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date of Birth</label>
+                            {{ patient_form.date_of_birth }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Password</label>
+                            {{ user_form.password1 }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Confirm Password</label>
+                            {{ user_form.password2 }}
+                        </div>
+                    </div>
+
+                    <h6 class="text-info mb-3 mt-4"><i class="bi bi-heart-pulse me-2"></i>Medical Info</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Gender</label>
+                            {{ patient_form.gender }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Blood Group</label>
+                            {{ patient_form.blood_group }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Height (cm)</label>
+                            {{ patient_form.height }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Weight (kg)</label>
+                            {{ patient_form.weight }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Emergency Contact</label>
+                            {{ patient_form.emergency_contact }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Allergies</label>
+                            {{ patient_form.allergies }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Medical History</label>
+                            {{ patient_form.medical_history }}
+                        </div>
+                    </div>
+
+                    {% if user_form.errors or patient_form.errors %}
+                    <div class="alert alert-danger small py-2">
+                        Please correct the errors above.
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-info w-100 text-dark fw-semibold py-2 mt-3">
+                        <i class="bi bi-check-circle me-2"></i>Create Account
+                    </button>
+                </form>
+                <p class="text-center small mt-4 mb-0" style="color:#8aa1bd;">
+                    Already have an account? <a href="{% url 'login' %}" class="text-info text-decoration-none">Sign
+                        In</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Schedule — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="d-flex justify-content-between align-items-center mb-4 cine-reveal">
+                <div>
+                    <h2 class="fw-bold mb-1">My <span class="cine-grad-text">Schedule</span></h2>
+                    <p class="mb-0 small" style="color:#8aa1bd;">{{ start_date|date:"M d" }} – {{ end_date|date:"M d, Y" }}</p>
+                </div>
+                <form method="get" class="cine-form d-flex gap-2 align-items-end">
+                    <div>
+                        <label class="form-label small mb-0">From</label>
+                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date|date:'Y-m-d' }}">
+                    </div>
+                    <div>
+                        <label class="form-label small mb-0">To</label>
+                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date|date:'Y-m-d' }}">
+                    </div>
+                    <button type="submit" class="btn btn-info btn-sm text-dark fw-semibold">Go</button>
+                </form>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="cine-glass p-4 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">
+                            <i class="bi bi-clock me-2"></i>Available Time Slots
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for slot in available_slots %}
+                            <span class="badge bg-info bg-opacity-25 text-info px-3 py-2">{{ slot }}</span>
+                            {% empty %}
+                            <p class="small mb-0" style="color:#8aa1bd;">No slots.</p>
+                            {% endfor %}
+                        </div>
+                        <p class="small mt-3 mb-0" style="color:#8aa1bd;"> Working hours: {{ doctor.working_hours_start|time:"H:i" }} – {{ doctor.working_hours_end|time:"H:i" }}
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="cine-glass p-4 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">
+                            <i class="bi bi-info-circle me-2"></i>Configuration
+                        </h6>
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span style="color:#8aa1bd;">Max Patients / Day</span>
+                            <span class="text-white fw-semibold">{{ doctor.max_patients_per_day }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between small mb-2">
+                            <span style="color:#8aa1bd;">Availability</span>
+                            <span class="badge {% if doctor.is_available %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if doctor.is_available %}Available{% else %}Unavailable{% endif %}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span style="color:#8aa1bd;">Consultation Fee</span>
+                            <span class="text-white fw-semibold">${{ doctor.consultation_fee|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                {% for date, appts in schedule_by_date.items %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="cine-glass p-3 h-100 cine-reveal">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 text-white fw-semibold">{{ date|date:"D, M d" }}</h6>
+                            {% if date == today %}<span class="badge bg-info text-dark">Today</span>{% endif %}
+                        </div>
+                        <div class="small mb-2" style="color:#8aa1bd;">{{ appts|length }} appointment{{ appts|length|pluralize }}</div>
+                        {% for appt in appts %}
+                        <div class="border-top border-secondary border-opacity-25 py-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-white small fw-semibold">{{ appt.time|time:"H:i" }}</span>
+                                {% include 'partials/status_badge.html' with status=appt.status %}
+                            </div>
+                            <div class="small" style="color:#8aa1bd;">{{ appt.patient.user.get_full_name }}</div>
+                        </div>
+                        {% empty %}
+                        <p class="small mb-0" style="color:#8aa1bd;">No appointments.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

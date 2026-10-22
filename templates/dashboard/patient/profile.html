@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}My Profile — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">My <span class="cine-grad-text">Profile</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">Manage your personal and medical information.</p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="activity" label="BMI" value=health_stats.bmi decimals=1 %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="calendar2-check" label="Appointments" value=health_stats.appointments %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="file-medical" label="Prescriptions" value=health_stats.prescriptions %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="folder2-open" label="Records" value=health_stats.medical_records %}
+                </div>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="cine-form">
+                {% csrf_token %}
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="cine-glass p-4 h-100 cine-reveal">
+                            <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Personal
+                                Info</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">First Name</label>{{ user_form.first_name }}</div>
+                                <div class="col-md-6"><label class="form-label">Last Name</label>{{ user_form.last_name }}</div>
+                                <div class="col-12"><label class="form-label">Email</label>{{ user_form.email }}</div>
+                                <div class="col-md-6"><label class="form-label">Phone</label>{{ user_form.phone }}</div>
+                                <div class="col-12"><label class="form-label">Address</label>{{ user_form.address }}
+                                </div>
+                                <div class="col-12"><label class="form-label">Profile Picture</label>{{ user_form.profile_picture }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="cine-glass p-4 h-100 cine-reveal">
+                            <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Medical
+                                Info</h6>
+                            <div class="row g-3">
+                                <div class="col-md-4"><label class="form-label">Age</label>{{ patient_form.age }}</div>
+                                <div class="col-md-4"><label class="form-label">Gender</label>{{ patient_form.gender }}
+                                </div>
+                                <div class="col-md-4"><label class="form-label">Blood Group</label>{{ patient_form.blood_group }}</div>
+                                <div class="col-md-6"><label class="form-label">Height (cm)</label>{{ patient_form.height }}</div>
+                                <div class="col-md-6"><label class="form-label">Weight (kg)</label>{{ patient_form.weight }}</div>
+                                <div class="col-12"><label class="form-label">Emergency Contact</label>{{ patient_form.emergency_contact }}</div>
+                                <div class="col-12"><label class="form-label">Allergies</label>{{ patient_form.allergies }}</div>
+                                <div class="col-12"><label class="form-label">Medical History</label>{{ patient_form.medical_history }}</div>
+                                <div class="col-12"><label class="form-label">Current Medications</label>{{ patient_form.current_medications }}</div>
+                                <div class="col-md-6"><label class="form-label">Insurance Provider</label>{{ patient_form.insurance_provider }}</div>
+                                <div class="col-md-6"><label class="form-label">Policy Number</label>{{ patient_form.insurance_policy_number }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-info text-dark fw-semibold px-4">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Reports — MediCare Admin{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Reports & <span class="cine-grad-text">Analytics</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">{{ date_from }} to {{ date_to }}</p>
+            </div>
+
+            <div class="cine-glass p-3 mb-4 cine-reveal">
+                <form method="get" class="row g-2 align-items-end cine-form">
+                    <div class="col-md-4">
+                        <label class="form-label small">From</label>
+                        <input type="date" name="date_from" class="form-control form-control-sm"
+                            value="{{ date_from|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">To</label>
+                        <input type="date" name="date_to" class="form-control form-control-sm"
+                            value="{{ date_to|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                            <i class="bi bi-funnel me-1"></i>Apply Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="calendar2-check" label="Appointments" value=appointment_stats.total %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="cash-stack" label="Revenue" value=billing_stats.total_revenue prefix="$" decimals=2 %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="people" label="New Patients" value=patient_stats.new_patients %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="graph-up" label="Revenue / Day" value=billing_stats.revenue_by_day|length %}
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Appointments
+                            by Status</h6>
+                        {% for s in appointment_stats.by_status %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-white">{{ s.status|title }}</span>
+                                <span style="color:#8aa1bd;">{{ s.count }}</span>
+                            </div>
+                            <div class="progress" style="height:8px;background:rgba(255,255,255,0.05);">
+                                <div class="progress-bar bg-info"
+                                    style="width:{% widthratio s.count appointment_stats.total 100 %}%"></div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="small" style="color:#8aa1bd;">No data.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Appointments
+                            by Department</h6>
+                        {% for d in appointment_stats.by_department %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-white">{{ d.department__name|default:"Unassigned" }}</span>
+                                <span style="color:#8aa1bd;">{{ d.count }}</span>
+                            </div>
+                            <div class="progress" style="height:8px;background:rgba(255,255,255,0.05);">
+                                <div class="progress-bar"
+                                    style="width:{% widthratio d.count appointment_stats.total 100 %}%;background:linear-gradient(90deg,#8b5cf6,#22d3ee);">
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="small" style="color:#8aa1bd;">No data.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Revenue by
+                            Payment Method</h6>
+                        <div class="table-responsive">
+                            <table class="table cine-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>Count</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for m in billing_stats.by_payment_method %}
+                                    <tr>
+                                        <td class="text-white">{{ m.payment_method|default:"—"|title }}</td>
+                                        <td style="color:#8aa1bd;">{{ m.count }}</td>
+                                        <td style="color:#10b981;">${{ m.total|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center" style="color:#8aa1bd;">No data.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Patient Age
+                            Distribution</h6>
+                        {% for group, count in patient_stats.by_age_group.items %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span class="text-white">Age {{ group }}</span>
+                                <span style="color:#8aa1bd;">{{ count }}</span>
+                            </div>
+                            <div class="progress" style="height:8px;background:rgba(255,255,255,0.05);">
+                                <div class="progress-bar bg-success"
+                                    style="width:{% widthratio count patient_stats.new_patients 100 %}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

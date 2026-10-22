@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Book Appointment — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Book <span class="cine-grad-text">Appointment</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">Select a doctor and time slot.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="cine-glass p-4 cine-reveal">
+                        <form method="post" class="cine-form" id="bookForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label">Doctor</label>
+                                {{ form.doctor }}
+                                {% if form.doctor.errors %}<div class="text-danger small">{{ form.doctor.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Date</label>
+                                    {{ form.date }}
+                                    {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Time</label>
+                                    {{ form.time }}
+                                    {% if form.time.errors %}<div class="text-danger small">{{ form.time.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Reason</label>
+                                {{ form.reason }}
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Symptoms (optional)</label>
+                                {{ form.symptoms }}
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Type</label>
+                                    {{ form.appointment_type }}
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <div class="form-check">
+                                        {{ form.is_urgent }}
+                                        <label class="form-check-label text-white" for="id_is_urgent">Urgent</label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if form.non_field_errors %}
+                            <div class="alert alert-danger small py-2">{{ form.non_field_errors }}</div>
+                            {% endif %}
+                            <button type="submit" class="btn btn-info text-dark fw-semibold w-100 py-2">
+                                <i class="bi bi-check-circle me-2"></i>Confirm Booking
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="cine-glass p-4 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Recent Doctors
+                        </h6>
+                        {% for d in recent_doctors %}
+                        <div
+                            class="d-flex align-items-center gap-2 py-2 border-bottom border-secondary border-opacity-25">
+                            <i class="bi bi-person-badge fs-5" style="color:#22d3ee;"></i>
+                            <div class="small">
+                                <div class="text-white">Dr. {{ d.user.get_full_name }}</div>
+                                <div style="color:#8aa1bd;">{{ d.specialization }}</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="small mb-0" style="color:#8aa1bd;">No previous doctors.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

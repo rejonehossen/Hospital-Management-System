@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Lab Reports — MediCare{% endblock %}
+{% block body %}
+<div class="d-flex">
+  {% include 'partials/sidebar.html' %}
+  <div class="flex-grow-1">
+    {% include 'partials/navbar.html' %}
+    <main class="p-4" data-cine-page>
+      {% include 'partials/messages.html' %}
+
+      <div class="d-flex justify-content-between align-items-center mb-4 cine-reveal">
+        <h2 class="fw-bold mb-0">Lab <span class="cine-grad-text">Reports</span></h2>
+        <button class="btn btn-info text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#newLabTestModal">
+          <i class="bi bi-plus-lg me-1"></i>Book Test
+        </button>
+      </div>
+
+      <div class="cine-glass p-4 cine-reveal">
+        <div class="table-responsive">
+          <table class="table cine-table align-middle">
+            <thead><tr><th>Test Name</th><th>Patient</th><th>Date</th><th>Status</th><th>Report</th></tr></thead>
+            <tbody>
+              {% for t in tests %}
+              <tr>
+                <td class="text-white">{{ t.test_name }}</td>
+                <td style="color:#8aa1bd;">{{ t.patient.user.get_full_name }}</td>
+                <td style="color:#8aa1bd;">{{ t.test_date|date:"M d, Y" }}</td>
+                <td>{% include 'partials/status_badge.html' with status=t.status %}</td>
+                <td>
+                  {% if t.result_file %}
+                    <a href="{{ t.result_file.url }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-download"></i> View</a>
+                  {% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+                </td>
+              </tr>
+              {% empty %}<tr><td colspan="5" class="text-center py-4" style="color:#8aa1bd;">No lab tests found.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade cine-modal" id="newLabTestModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" class="cine-form">
+        {% csrf_token %}
+        <div class="modal-header"><h5 class="modal-title">Book Lab Test</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Patient</label>{{ form.patient }}</div>
+          <div class="mb-3"><label class="form-label">Test Name</label>{{ form.test_name }}</div>
+          <div class="mb-3"><label class="form-label">Date</label>{{ form.test_date }}</div>
+          <div class="mb-0"><label class="form-label">Status</label>{{ form.status }}</div>
+        </div>
+        <div class="modal-footer"><button type="submit" class="btn btn-info text-dark fw-bold">Create</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

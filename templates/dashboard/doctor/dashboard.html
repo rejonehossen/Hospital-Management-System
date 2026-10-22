@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Doctor Dashboard — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Welcome, <span class="cine-grad-text">Dr. {{ doctor.user.last_name }}</span>
+                </h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">{{ doctor.specialization }} &middot; {{ doctor.department.name|default:"General" }}</p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="calendar2-check-fill" label="Total Appointments" value=total_appointments %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="calendar-day-fill" label="Today" value=today_appointments %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="hourglass-split" label="Pending" value=pending_appointments %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="people-fill" label="Patients" value=total_patients %}
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-7">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Today's
+                            Schedule</h6>
+                        {% for appt in todays_schedule %}
+                        <div
+                            class="d-flex align-items-center gap-3 py-2 border-bottom border-secondary border-opacity-25">
+                            <div class="text-center" style="min-width:64px;">
+                                <div class="fw-bold text-info">{{ appt.time|time:"H:i" }}</div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="text-white fw-semibold">{{ appt.patient.user.get_full_name }}</div>
+                                <div class="small" style="color:#8aa1bd;">{{ appt.reason|truncatechars:60 }}</div>
+                            </div>
+                            {% include 'partials/status_badge.html' with status=appt.status %}
+                        </div>
+                        {% empty %}
+                        <p class="text-center py-4 mb-0" style="color:#8aa1bd;">
+                            <i class="bi bi-check2-circle fs-3 d-block mb-2"></i>No appointments today.
+                        </p>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Upcoming</h6>
+                        {% for appt in upcoming_appointments %}
+                        <div class="mb-3">
+                            <div class="text-white fw-semibold small">{{ appt.patient.user.get_full_name }}</div>
+                            <div class="small" style="color:#8aa1bd;">
+                                <i class="bi bi-calendar me-1"></i>{{ appt.date|date:"M d" }} &middot; {{ appt.time|time:"H:i" }}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="small mb-0" style="color:#8aa1bd;">No upcoming appointments.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

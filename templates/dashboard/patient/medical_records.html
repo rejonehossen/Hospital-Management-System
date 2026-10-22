@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Medical Records — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Medical <span class="cine-grad-text">Records</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">All your clinical documents in one place.</p>
+            </div>
+
+            <div class="cine-glass p-3 mb-4 cine-reveal">
+                <form method="get" class="row g-2 align-items-end cine-form">
+                    <div class="col-md-4">
+                        <label class="form-label small">Type</label>
+                        <select name="type" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            {% for val, label in record_types %}
+                            <option value="{{ val }}" {% if val in type_filter %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Doctor</label>
+                        <select name="doctor" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            {% for d in doctors %}
+                            <option value="{{ d.id }}" {% if d.id|stringformat:"s" in doctor_filter|stringformat:"s" %}selected{% endif %}>
+                                Dr. {{ d.user.get_full_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="row g-3">
+                {% for record in records %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="badge bg-info bg-opacity-25 text-info">{{ record.get_record_type_display
+                                }}</span>
+                            {% if record.is_critical %}<span class="badge bg-danger">Critical</span>{% endif %}
+                        </div>
+                        <h6 class="text-white fw-semibold">{{ record.title }}</h6>
+                        <p class="small mb-2" style="color:#8aa1bd;">{{ record.description|truncatewords:20 }}</p>
+                        <div class="small mb-2" style="color:#8aa1bd;">
+                            <i class="bi bi-person-badge me-1"></i>
+                            {% if record.doctor %}Dr. {{ record.doctor.user.get_full_name }}{% else %}—{% endif %}
+                        </div>
+                        <div class="small mb-2" style="color:#8aa1bd;">
+                            <i class="bi bi-calendar me-1"></i>{{ record.created_at|date:"M d, Y" }}
+                        </div>
+                        {% if record.file %}
+                        <a href="{{ record.file.url }}" target="_blank" class="btn btn-sm btn-outline-info w-100 mt-2">
+                            <i class="bi bi-file-earmark-arrow-down me-1"></i>Download File
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5" style="color:#8aa1bd;">
+                    <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>No medical records.
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if records.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if records.has_previous %}
+                    <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                            href="?page={{ records.previous_page_number }}">&laquo;</a></li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link bg-info text-dark border-info">{{ records.number
+                            }} / {{ records.paginator.num_pages }}</span></li>
+                    {% if records.has_next %}
+                    <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                            href="?page={{ records.next_page_number }}">&raquo;</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

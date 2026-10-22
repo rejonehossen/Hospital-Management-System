@@ -1,0 +1,75 @@
+<aside class="cine-sidebar d-flex flex-column p-3">
+    <a href="{% url 'dashboard' %}" class="text-decoration-none mb-4 d-flex align-items-center gap-2">
+        <i class="bi bi-heart-pulse-fill cine-glow" style="color:#22d3ee;font-size:1.5rem;"></i>
+        <span class="fw-bold cine-grad-text fs-5">MediCare</span>
+    </a>
+
+    <div class="text-uppercase small fw-semibold mb-2 px-2" style="color:#5b7596;letter-spacing:.1em;">
+        Navigation
+    </div>
+    <ul class="nav flex-column mb-auto">
+        {% if user.role == 'admin' %}
+        <li><a class="nav-link" href="{% url 'admin_dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Command
+                Center</a></li>
+        <li><a class="nav-link" href="{% url 'manage_doctors' %}"><i class="bi bi-person-badge me-2"></i>Doctors</a>
+        </li>
+        <li><a class="nav-link" href="{% url 'manage_patients' %}"><i class="bi bi-people me-2"></i>Patients</a></li>
+        <li><a class="nav-link" href="{% url 'manage_appointments' %}"><i
+                    class="bi bi-calendar2-check me-2"></i>Appointments</a></li>
+        <li><a class="nav-link" href="{% url 'manage_billing' %}"><i class="bi bi-cash-coin me-2"></i>Billing</a></li>
+        <li><a class="nav-link" href="{% url 'admin_reports' %}"><i class="bi bi-graph-up-arrow me-2"></i>Reports</a>
+        <li><a class="nav-link" href="{% url 'admin_create_patient' %}"><i class="bi bi-person-plus me-2"></i>Walk-in Patient</a></li>
+        <li><a class="nav-link" href="{% url 'admin_quick_book' %}"><i class="bi bi-calendar-plus me-2"></i>Quick Book</a></li>
+        <li><a class="nav-link" href="{% url 'admin_lab_reports' %}"><i class="bi bi-droplet me-2"></i>Lab Reports</a></li>
+        <li><a class="nav-link" href="{% url 'admin_premium_billing' %}"><i class="bi bi-cash-coin me-2"></i>Billing & Discounts</a></li>
+        <li><a class="nav-link" href="{% url 'admin_inventory' %}"><i class="bi bi-box-seam me-2"></i>Inventory</a></li>
+        </li>
+        <li><a class="nav-link" href="{% url 'admin_settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>
+        {% elif user.role == 'doctor' %}
+        <li><a class="nav-link" href="{% url 'doctor_dashboard' %}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+        </li>
+        <li><a class="nav-link" href="{% url 'doctor_appointments' %}"><i
+                    class="bi bi-calendar2-check me-2"></i>Appointments</a></li>
+        <li><a class="nav-link" href="{% url 'doctor_patients' %}"><i class="bi bi-people me-2"></i>Patients</a></li>
+        <li><a class="nav-link" href="{% url 'doctor_prescriptions' %}"><i
+                    class="bi bi-file-medical me-2"></i>Prescriptions</a></li>
+        <li><a class="nav-link" href="{% url 'doctor_schedule' %}"><i class="bi bi-calendar-week me-2"></i>Schedule</a>
+        </li>
+        <li><a class="nav-link" href="{% url 'doctor_profile' %}"><i class="bi bi-person me-2"></i>Profile</a></li>
+        {% elif user.role == 'patient' %}
+        <li><a class="nav-link" href="{% url 'patient_dashboard' %}"><i
+                    class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+        <li><a class="nav-link" href="{% url 'patient_appointments' %}"><i
+                    class="bi bi-calendar2-check me-2"></i>Appointments</a></li>
+        <li><a class="nav-link" href="{% url 'book_appointment' %}"><i class="bi bi-calendar-plus me-2"></i>Book
+                Appointment</a></li>
+        <li><a class="nav-link" href="{% url 'patient_prescriptions' %}"><i
+                    class="bi bi-file-medical me-2"></i>Prescriptions</a></li>
+        <li><a class="nav-link" href="{% url 'patient_medical_records' %}"><i
+                    class="bi bi-folder2-open me-2"></i>Medical Records</a></li>
+        <li><a class="nav-link" href="{% url 'patient_billing' %}"><i class="bi bi-cash-coin me-2"></i>Billing</a></li>
+        <li><a class="nav-link" href="{% url 'patient_profile' %}"><i class="bi bi-person me-2"></i>Profile</a></li>
+        {% endif %}
+        <li><a class="nav-link" href="{% url 'notifications' %}"><i class="bi bi-bell me-2"></i>Notifications
+                {% if unread_notifications_count %}<span class="badge bg-danger ms-1">{{ unread_notifications_count
+                    }}</span>{% endif %}
+            </a></li>
+    </ul>
+
+    <hr class="border-secondary opacity-25">
+    <div class="d-flex align-items-center gap-2 px-2 py-2">
+        {% if user.profile_picture %}
+        <img src="{{ user.profile_picture.url }}" class="rounded-circle" width="36" height="36" alt="Avatar">
+        {% else %}
+        <div class="rounded-circle bg-info text-dark d-flex align-items-center justify-content-center fw-bold"
+            style="width:36px;height:36px;">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+        {% endif %}
+        <div class="small">
+            <div class="text-white fw-semibold">{{ user.get_full_name|default:user.username }}</div>
+            <div style="color:#8aa1bd;">{{ user.get_role_display }}</div>
+        </div>
+    </div>
+    <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm mt-2">
+        <i class="bi bi-box-arrow-right me-1"></i>Sign out
+    </a>
+</aside>

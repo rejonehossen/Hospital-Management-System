@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}My Patients — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">My <span class="cine-grad-text">Patients</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">{{ stats.total }} total &middot; {{ stats.male }} male &middot; {{ stats.female }} female</p>
+            </div>
+
+            <div class="cine-glass p-3 mb-4 cine-reveal">
+                <form method="get" class="row g-2 align-items-end cine-form">
+                    <div class="col-md-10">
+                        <label class="form-label small">Search</label>
+                        <input type="text" name="search" class="form-control form-control-sm" value="{{ search_query }}"
+                            placeholder="Name or email">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="cine-glass p-4 cine-reveal">
+                <div class="table-responsive">
+                    <table class="table cine-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th>Blood</th>
+                                <th>Phone</th>
+                                <th>Last Visit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in patients %}
+                            <tr>
+                                <td class="text-white">{{ p.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">{{ p.age }}</td>
+                                <td style="color:#8aa1bd;">{{ p.get_gender_display }}</td>
+                                <td>
+                                    {% if p.blood_group %}<span class="badge bg-danger bg-opacity-25 text-danger">{{ p.blood_group }}</span>
+                                    {% else %}<span style="color:#8aa1bd;">—</span>{% endif %}
+                                </td>
+                                <td style="color:#8aa1bd;">{{ p.user.phone|default:"—" }}</td>
+                                <td style="color:#8aa1bd;">{{ p.last_visit|date:"M d, Y"|default:"—" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4" style="color:#8aa1bd;">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>No patients found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if patients.has_other_pages %}
+                <nav class="mt-4">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if patients.has_previous %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ patients.previous_page_number }}">&laquo;</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link bg-info text-dark border-info">{{ patients.number }} / {{ patients.paginator.num_pages }}</span></li>
+                        {% if patients.has_next %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info" href="?page={{ patients.next_page_number }}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

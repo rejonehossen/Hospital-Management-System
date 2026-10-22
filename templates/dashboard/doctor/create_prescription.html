@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}Create Prescription — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">New <span class="cine-grad-text">Prescription</span></h2>
+                {% if appointment %}
+                <p class="mb-0 small" style="color:#8aa1bd;">
+                    For {{ patient.user.get_full_name }} &middot; {{ appointment.date|date:"M d, Y" }} at {{
+                    appointment.time|time:"H:i" }}
+                </p>
+                {% else %}
+                <p class="mb-0 small" style="color:#8aa1bd;">Create a prescription from scratch.</p>
+                {% endif %}
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="cine-glass p-4 cine-reveal">
+                        <form method="post" class="cine-form">
+                            {% csrf_token %}
+
+                            {% if not appointment %}
+                            <div class="mb-3">
+                                <label class="form-label">Patient</label>
+                                <select name="patient" class="form-select" required>
+                                    <option value="">— Select Patient —</option>
+                                    {% for p in recent_patients %}
+                                    <option value="{{ p.id }}">{{ p.user.get_full_name }} ({{ p.age }}y)</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Medicine Name</label>
+                                    {{ form.medicine_name }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Dosage</label>
+                                    {{ form.dosage }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Frequency</label>
+                                    {{ form.frequency }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Duration</label>
+                                    {{ form.duration }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Quantity</label>
+                                    {{ form.quantity }}
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Instructions</label>
+                                    {{ form.instructions }}
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Medical Advice</label>
+                                    {{ form.advice }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Max Refills</label>
+                                    {{ form.max_refills }}
+                                </div>
+                            </div>
+
+                            {% if form.errors %}
+                            <div class="alert alert-danger small py-2 mt-3">{{ form.errors }}</div>
+                            {% endif %}
+
+                            <div class="d-flex gap-2 mt-4">
+                                <button type="submit" class="btn btn-info text-dark fw-semibold">
+                                    <i class="bi bi-check-circle me-2"></i>Create Prescription
+                                </button>
+                                <a href="{% url 'doctor_prescriptions' %}" class="btn btn-outline-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="cine-glass p-4 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Recent
+                            Patients</h6>
+                        {% for p in recent_patients %}
+                        <div
+                            class="d-flex align-items-center gap-2 py-2 border-bottom border-secondary border-opacity-25">
+                            <i class="bi bi-person-circle fs-5" style="color:#22d3ee;"></i>
+                            <div class="small">
+                                <div class="text-white">{{ p.user.get_full_name }}</div>
+                                <div style="color:#8aa1bd;">{{ p.age }}y &middot; {{ p.get_gender_display }}</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="small mb-0" style="color:#8aa1bd;">No recent patients.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

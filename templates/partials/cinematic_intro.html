@@ -1,0 +1,17 @@
+{% load static %}
+<div id="cine-intro" role="dialog" aria-label="Welcome sequence" aria-modal="false">
+    <canvas id="cine-intro-canvas" aria-hidden="true"></canvas>
+    <div class="cine-intro-brand">
+        <div class="mb-3">
+            <i class="bi bi-heart-pulse-fill cine-glow" style="font-size:3rem;color:#22d3ee;"></i>
+        </div>
+        <h1 class="display-4 fw-bold cine-grad-text mb-2">MediCare</h1>
+        <p class="text-uppercase small letter-spacing-lg" style="letter-spacing:0.35em;color:#8aa1bd;">
+            Advanced Medical Systems
+        </p>
+    </div>
+    <button id="cine-skip" type="button" class="btn btn-outline-info btn-sm position-absolute bottom-0 end-0 m-4"
+        style="z-index:3;">
+        Skip <i class="bi bi-skip-forward ms-1"></i>
+    </button>
+</div>

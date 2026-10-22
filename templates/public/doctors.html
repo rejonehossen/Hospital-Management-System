@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}Our Doctors — MediCare{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="text-center mb-5 cine-reveal">
+        <p class="text-uppercase small mb-2 cine-glow" style="color:#22d3ee;letter-spacing:.35em;">Board-Certified
+            Specialists</p>
+        <h1 class="display-3 fw-bold mb-3">Meet Our <span class="cine-grad-text">Doctors</span></h1>
+        <p class="lead mx-auto" style="color:#8aa1bd;max-width:640px;">
+            Every physician at {{ hospital_name }} is vetted, board-certified, and dedicated to exceptional outcomes.
+        </p>
+    </div>
+
+    <div class="cine-glass p-3 mb-4 cine-reveal">
+        <form method="get" class="row g-2 align-items-end cine-form">
+            <div class="col-md-5">
+                <label class="form-label small">Search</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                    value="{{ search_query|default:'' }}" placeholder="Name, specialization, or qualification">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Department</label>
+                <select name="department" class="form-select form-select-sm">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                    <option value="{{ d.id }}" {% if d.id|stringformat:"s" in selected_department|stringformat:"s" %}selected{% endif %}>
+                        {{ d.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="row g-4">
+        {% for doctor in doctors %}
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <a href="{% url 'doctor_detail' doctor.pk %}" class="text-decoration-none">
+                <div class="cine-tilt-wrap">
+                    <div class="cine-tilt cine-glass p-4 h-100 text-center cine-reveal">
+                        {% if doctor.user.profile_picture %}
+                        <img src="{{ doctor.user.profile_picture.url }}" class="rounded-circle mb-3"
+                            style="width:96px;height:96px;object-fit:cover;" alt="{{ doctor.user.get_full_name }}">
+                        {% else %}
+                        <div class="rounded-circle bg-info bg-opacity-25 d-inline-flex align-items-center justify-content-center mb-3"
+                            style="width:96px;height:96px;">
+                            <i class="bi bi-person-fill fs-1" style="color:#22d3ee;"></i>
+                        </div>
+                        {% endif %}
+                        <h6 class="text-white fw-semibold mb-1">Dr. {{ doctor.user.get_full_name }}</h6>
+                        <p class="small mb-2" style="color:#22d3ee;">{{ doctor.specialization|default:doctor.qualification }}</p>
+                        <p class="small mb-2" style="color:#8aa1bd;">
+                            <i class="bi bi-building me-1"></i>{{ doctor.department.name|default:"General" }}
+                        </p>
+                        <div class="small mb-2" style="color:#fbbf24;">
+                            <i class="bi bi-star-fill"></i> {{ doctor.average_rating|floatformat:1 }}
+                            <span class="ms-2" style="color:#8aa1bd;">{{ doctor.experience }} yrs</span>
+                        </div>
+                        <span class="badge {% if doctor.is_available %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if doctor.is_available %}Available{% else %}Unavailable{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5" style="color:#8aa1bd;">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            No doctors found.
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if doctors.has_other_pages %}
+    <nav class="mt-5" aria-label="Doctors pagination">
+        <ul class="pagination justify-content-center mb-0">
+            {% if doctors.has_previous %}
+            <li class="page-item">
+                <a class="page-link bg-dark border-secondary text-info"
+                    href="?page={{ doctors.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link bg-info text-dark border-info">
+                    {{ doctors.number }} / {{ doctors.paginator.num_pages }}
+                </span>
+            </li>
+            {% if doctors.has_next %}
+            <li class="page-item">
+                <a class="page-link bg-dark border-secondary text-info"
+                    href="?page={{ doctors.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_department %}&department={{ selected_department }}{% endif %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}

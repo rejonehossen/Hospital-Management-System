@@ -1,0 +1,5694 @@
+from django.core.management.base import BaseCommand
+from django.contrib.auth.hashers import make_password
+from faker import Faker
+import random
+from datetime import datetime, timedelta
+from ...models import *
+
+class Command(BaseCommand):
+    help = 'Create sample data for development'
+
+    def handle(self, *args, **options):
+        fake = Faker()
+
+        self.stdout.write(self.style.SUCCESS('Creating sample data...'))
+
+        # Create departments
+        departments_data = [
+            ('Cardiology', 'Heart and cardiovascular diseases', 'fa-heart'),
+            ('Neurology', 'Brain and nervous system disorders', 'fa-brain'),
+            ('Orthopedics', 'Bones, joints, and muscles', 'fa-bone'),
+            ('Pediatrics', 'Child healthcare', 'fa-baby'),
+            ('Dermatology', 'Skin diseases and conditions', 'fa-allergies'),
+            ('Ophthalmology', 'Eye care and vision', 'fa-eye'),
+            ('ENT', 'Ear, nose, and throat diseases', 'fa-ear'),
+            ('Dental', 'Oral healthcare', 'fa-tooth'),
+            ('Gynecology', 'Women\'s reproductive health', 'fa-female'),
+            ('General Medicine', 'General healthcare', 'fa-stethoscope'),
+        ]
+
+        departments = []
+        for name, desc, icon in departments_data:
+            dept, created = Department.objects.get_or_create(
+                name=name,
+                defaults={'description': desc, 'icon': icon}
+            )
+            departments.append(dept)
+            if created:
+                self.stdout.write(f'Created department: {name}')
+
+        # Create admin user
+        admin_user, admin_created = User.objects.get_or_create(
+            username='admin',
+            defaults={
+                'email': 'admin@medicare.com',
+                'first_name': 'System',
+                'last_name': 'Administrator',
+                'password': make_password('admin123'),
+                'role': 'admin',
+                'is_staff': True,
+                'is_superuser': True,
+                'is_verified': True,
+            }
+        )
+        if admin_created:
+            self.stdout.write('Created admin user')
+
+        # Create sample doctors
+        specialties = [
+            'Cardiologist', 'Neurologist', 'Orthopedic Surgeon', 'Pediatrician',
+            'Dermatologist', 'Ophthalmologist', 'ENT Specialist', 'Dentist',
+            'Gynecologist', 'General Physician'
+        ]
+
+        qualifications = ['MD', 'MBBS', 'MS', 'MCh', 'DNB', 'FRCS']
+
+        for i in range(20):
+            first_name = fake.first_name()
+            last_name = fake.last_name()
+            username = f'doc{first_name.lower()}{i}'
+            email = f'{username}@medicare.com'
+
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    'email': email,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'password': make_password('doctor123'),
+                    'role': 'doctor',
+                    'phone': fake.phone_number()[:15],
+                    'is_verified': True,
+                }
+            )
+
+            if created:
+                doctor = Doctor.objects.create(
+                    user=user,
+                    department=random.choice(departments),
+                    qualification=f'{random.choice(qualifications)} in {random.choice(specialties)}',
+                    specialization=random.choice(specialties),
+                    experience=random.randint(5, 30),
+                    consultation_fee=random.randint(500, 2000),
+                    bio=fake.text(max_nb_chars=200),
+                    license_number=f'MED{random.randint(100000, 999999)}',
+                    is_available=random.choice([True, True, True, False]),  # 75% available
+                    max_patients_per_day=random.randint(15, 25),
+                    working_hours_start='09:00',
+                    working_hours_end='17:00',
+                )
+                self.stdout.write(f'Created doctor: Dr. {first_name} {last_name}')
+
+        # Create sample patients
+        blood_groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+
+        for i in range(50):
+            first_name = fake.first_name()
+            last_name = fake.last_name()
+            username = f'pat{first_name.lower()}{i}'
+            email = f'{username}@example.com'
+
+            user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    'email': email,
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'password': make_password('patient123'),
+                    'role': 'patient',
+                    'phone': fake.phone_number()[:15],
+                    'address': fake.address(),
+                    'date_of_birth': fake.date_of_birth(minimum_age=18, maximum_age=80),
+                    'is_verified': True,
+                }
+            )
+
+            if created:
+                dob = user.date_of_birth
+                today = datetime.now().date()
+                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+                patient = Patient.objects.create(
+                    user=user,
+                    age=age,
+                    gender=random.choice(['M', 'F']),
+                    blood_group=random.choice(blood_groups),
+                    height=random.uniform(150, 190),
+                    weight=random.uniform(50, 100),
+                    emergency_contact=fake.phone_number()[:15],
+                    allergies=random.choice(['None', 'Penicillin', 'Dust', 'Peanuts', '']),
+                    medical_history=random.choice([
+                        'Hypertension', 'Diabetes', 'Asthma', 'None',
+                        'Previous heart surgery', 'Migraine'
+                    ]),
+                    current_medications=random.choice(['None', 'Metformin 500mg', 'Amlodipine 5mg', '']),
+                )
+                self.stdout.write(f'Created patient: {first_name} {last_name}')
+
+        # Create sample appointments
+        doctors = Doctor.objects.all()
+        patients = Patient.objects.all()
+
+        status_choices = ['pending', 'confirmed', 'completed', 'cancelled']
+        type_choices = ['in_person', 'telemedicine', 'follow_up']
+
+        for i in range(100):
+            doctor = random.choice(doctors)
+            patient = random.choice(patients)
+
+            # Random date within next 30 days or past 30 days
+            days_offset = random.randint(-30, 30)
+            appointment_date = datetime.now().date() + timedelta(days=days_offset)
+
+            # Only create if date is valid (not in past for pending/confirmed)
+            if days_offset < 0:
+                status = random.choice(['completed', 'cancelled'])
+            else:
+                status = random.choice(['pending', 'confirmed'])
+
+            # Generate random time during doctor's working hours
+            hour = random.randint(9, 16)
+            minute = random.choice([0, 30])
+            appointment_time = f'{hour:02d}:{minute:02d}'
+
+            appointment = Appointment.objects.create(
+                patient=patient,
+                doctor=doctor,
+                date=appointment_date,
+                time=appointment_time,
+                reason=fake.text(max_nb_chars=100),
+                symptoms=fake.text(max_nb_chars=200),
+                status=status,
+                appointment_type=random.choice(type_choices),
+                is_urgent=random.choice([True, False, False, False]),
+            )
+
+            # Update patient's last visit if appointment is completed
+            if status == 'completed':
+                patient.last_visit = datetime.now()
+                patient.save()
+
+            self.stdout.write(f'Created appointment: {patient} with {doctor} on {appointment_date}')
+
+        # Create sample prescriptions
+        appointments = Appointment.objects.filter(status='completed')
+        medicines = [
+            'Amoxicillin 500mg', 'Paracetamol 500mg', 'Ibuprofen 400mg',
+            'Cetirizine 10mg', 'Omeprazole 20mg', 'Metformin 500mg',
+            'Atorvastatin 20mg', 'Levothyroxine 50mcg', 'Losartan 50mg',
+            'Amlodipine 5mg', 'Metoprolol 50mg', 'Furosemide 40mg'
+        ]
+
+        for appointment in appointments[:30]:  # Prescriptions for 30 completed appointments
+            for _ in range(random.randint(1, 3)):  # 1-3 medicines per prescription
+                prescription = Prescription.objects.create(
+                    appointment=appointment,
+                    patient=appointment.patient,
+                    doctor=appointment.doctor,
+                    medicine_name=random.choice(medicines),
+                    dosage=random.choice(['500mg', '250mg', '10mg', '20mg', '50mg']),
+                    frequency=random.choice(['Once daily', 'Twice daily', 'Three times daily', 'As needed']),
+                    duration=random.choice(['7 days', '14 days', '30 days', 'Continue']),
+                    quantity=random.choice(['30 tablets', '60ml', '1 tube', '15 capsules']),
+                    instructions=random.choice([
+                        'Take after meals', 'Take on empty stomach', 'With plenty of water',
+                        'Avoid alcohol', 'Take at bedtime'
+                    ]),
+                    advice=fake.text(max_nb_chars=200),
+                    max_refills=random.randint(0, 3),
+                    is_active=random.choice([True, False]),
+                )
+                self.stdout.write(f'Created prescription: {prescription.medicine_name} for {appointment.patient}')
+
+        # Create sample bills
+        completed_appointments = Appointment.objects.filter(status='completed')
+
+        for appointment in completed_appointments[:20]:  # Bills for 20 completed appointments
+            consultation_fee = appointment.doctor.consultation_fee
+            medicine_charges = random.randint(0, 1000)
+            test_charges = random.randint(0, 2000)
+            other_charges = random.randint(0, 500)
+            discount = random.randint(0, 200)
+            tax_rate = 0.18  # 18% tax
+
+            subtotal = consultation_fee + medicine_charges + test_charges + other_charges
+            tax_amount = subtotal * tax_rate
+            total_amount = subtotal + tax_amount - discount
+
+            bill = Billing.objects.create(
+                appointment=appointment,
+                patient=appointment.patient,
+                doctor=appointment.doctor,
+                consultation_fee=consultation_fee,
+                medicine_charges=medicine_charges,
+                test_charges=test_charges,
+                other_charges=other_charges,
+                tax_amount=tax_amount,
+                discount=discount,
+                total_amount=total_amount,
+                paid_amount=random.choice([total_amount, total_amount * 0.5, 0]),
+                payment_status=random.choice(['pending', 'partial', 'paid']),
+                payment_method=random.choice(['cash', 'card', 'online', 'insurance']),
+                due_date=datetime.now().date() + timedelta(days=15),
+            )
+            self.stdout.write(f'Created bill: ${total_amount:.2f} for {appointment.patient}')
+
+        self.stdout.write(self.style.SUCCESS('Sample data created successfully!'))
+
+from django.conf import settings
+from .models import Notification, HospitalSetting
+
+def site_settings(request):
+    """Add site settings to template context."""
+    context = {
+        'hospital_name': getattr(settings, 'HOSPITAL_NAME', 'MediCare Hospital'),
+        'hospital_address': getattr(settings, 'HOSPITAL_ADDRESS', ''),
+        'hospital_phone': getattr(settings, 'HOSPITAL_PHONE', ''),
+        'hospital_email': getattr(settings, 'HOSPITAL_EMAIL', ''),
+        'debug': settings.DEBUG,
+    }
+
+    # Add settings from database
+    try:
+        db_settings = HospitalSetting.objects.filter(is_active=True)
+        for setting in db_settings:
+            context[f'setting_{setting.key}'] = setting.value
+    except:
+        pass
+
+    return context
+
+def user_notifications(request):
+    """Add user notifications to template context."""
+    context = {}
+
+    if request.user.is_authenticated:
+        unread_count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).count()
+        context['unread_notifications_count'] = unread_count
+
+        # Recent notifications
+        recent_notifications = Notification.objects.filter(
+            user=request.user
+        ).order_by('-created_at')[:5]
+        context['recent_notifications'] = recent_notifications
+
+    return context
+
+def user_role_context(request):
+    """Add user role information to template context."""
+    context = {}
+
+    if request.user.is_authenticated:
+        context['user_role'] = request.user.role
+        context['is_admin'] = request.user.role == 'admin'
+        context['is_doctor'] = request.user.role == 'doctor'
+        context['is_patient'] = request.user.role == 'patient'
+        context['is_receptionist'] = request.user.role == 'receptionist'
+        context['is_staff_user'] = request.user.role in ['admin', 'doctor', 'receptionist']
+
+    return context
+
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib import messages
+from django.shortcuts import redirect
+
+def admin_required(function=None, login_url='login'):
+    """
+    Decorator for views that checks if the user is an admin,
+    redirecting to the login page if necessary.
+    """
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.role == 'admin',
+        login_url=login_url
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def doctor_required(function=None, login_url='login'):
+    """
+    Decorator for views that checks if the user is a doctor,
+    redirecting to the login page if necessary.
+    """
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.role == 'doctor',
+        login_url=login_url
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def patient_required(function=None, login_url='login'):
+    """
+    Decorator for views that checks if the user is a patient,
+    redirecting to the login page if necessary.
+    """
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.role == 'patient',
+        login_url=login_url
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def receptionist_required(function=None, login_url='login'):
+    """
+    Decorator for views that checks if the user is a receptionist,
+    redirecting to the login page if necessary.
+    """
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.role == 'receptionist',
+        login_url=login_url
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def staff_required(function=None, login_url='login'):
+    """
+    Decorator for views that checks if the user is staff (admin, doctor, or receptionist),
+    redirecting to the login page if necessary.
+    """
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.role in ['admin', 'doctor', 'receptionist'],
+        login_url=login_url
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def verified_user_required(function=None, login_url='login'):
+    """
+    Decorator for views that checks if the user is verified,
+    redirecting to the login page if necessary.
+    """
+    actual_decorator = user_passes_test(
+        lambda u: u.is_authenticated and u.is_verified,
+        login_url=login_url
+    )
+    if function:
+        return actual_decorator(function)
+    return actual_decorator
+
+def ajax_required(function):
+    """
+    Decorator for views that should only be accessed via AJAX.
+    """
+    def wrap(request, *args, **kwargs):
+        if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return redirect('home')
+        return function(request, *args, **kwargs)
+    wrap.__doc__ = function.__doc__
+    wrap.__name__ = function.__name__
+    return wrap
+
+def has_permission(permission):
+    """
+    Decorator for views that checks if the user has specific permission.
+    """
+    def decorator(function):
+        def wrap(request, *args, **kwargs):
+            if not request.user.has_perm(permission):
+                messages.error(request, 'You do not have permission to access this page.')
+                return redirect('dashboard')
+            return function(request, *args, **kwargs)
+        wrap.__doc__ = function.__doc__
+        wrap.__name__ = function.__name__
+        return wrap
+    return decorator
+
+def check_ownership(model_class, owner_field='user'):
+    """
+    Decorator that checks if the user owns the object they're trying to access.
+    """
+    def decorator(view_func):
+        def wrap(request, *args, **kwargs):
+            # Get the object id from kwargs
+            obj_id = kwargs.get('pk') or kwargs.get('id') or kwargs.get('appointment_id') or kwargs.get('prescription_id')
+
+            if not obj_id:
+                return view_func(request, *args, **kwargs)
+
+            try:
+                obj = model_class.objects.get(pk=obj_id)
+
+                # Check ownership
+                if request.user.role == 'admin':
+                    # Admin can access everything
+                    return view_func(request, *args, **kwargs)
+
+                elif request.user.role == 'doctor':
+                    # Doctor can access their own records
+                    if hasattr(obj, 'doctor') and obj.doctor.user == request.user:
+                        return view_func(request, *args, **kwargs)
+
+                    # Doctor can access appointments with them
+                    if model_class == Appointment and obj.doctor.user == request.user:
+                        return view_func(request, *args, **kwargs)
+
+                elif request.user.role == 'patient':
+                    # Patient can access their own records
+                    if hasattr(obj, 'patient') and obj.patient.user == request.user:
+                        return view_func(request, *args, **kwargs)
+
+                    # Patient can access their appointments
+                    if model_class == Appointment and obj.patient.user == request.user:
+                        return view_func(request, *args, **kwargs)
+
+                # If we get here, user doesn't have permission
+                messages.error(request, 'You do not have permission to access this resource.')
+                return redirect('dashboard')
+
+            except model_class.DoesNotExist:
+                messages.error(request, 'The requested resource does not exist.')
+                return redirect('dashboard')
+
+        wrap.__doc__ = view_func.__doc__
+        wrap.__name__ = view_func.__name__
+        return wrap
+    return decorator
+
+def rate_limit(max_requests, period=60):
+    """
+    Simple rate limiting decorator.
+    """
+    from django.core.cache import cache
+    from django.http import HttpResponseForbidden
+    import time
+
+    def decorator(view_func):
+        def wrap(request, *args, **kwargs):
+            # Create a unique key for this user and view
+            if request.user.is_authenticated:
+                key = f"rate_limit:{request.user.id}:{view_func.__name__}"
+            else:
+                ip = request.META.get('REMOTE_ADDR', '')
+                key = f"rate_limit:{ip}:{view_func.__name__}"
+
+            # Get current count
+            current = cache.get(key, [])
+
+            # Remove old timestamps
+            now = time.time()
+            current = [timestamp for timestamp in current if timestamp > now - period]
+
+            # Check if limit exceeded
+            if len(current) >= max_requests:
+                return HttpResponseForbidden("Rate limit exceeded. Please try again later.")
+
+            # Add current timestamp
+            current.append(now)
+            cache.set(key, current, period)
+
+            return view_func(request, *args, **kwargs)
+
+        wrap.__doc__ = view_func.__doc__
+        wrap.__name__ = view_func.__name__
+        return wrap
+    return decorator
+
+
+
+
+
+from django import forms
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from .models import *
+import re
+
+class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your email address'
+        })
+    )
+    first_name = forms.CharField(
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your first name'
+        })
+    )
+    last_name = forms.CharField(
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your last name'
+        })
+    )
+    phone = forms.CharField(
+        max_length=15,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your phone number'
+        })
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'first_name', 'last_name', 'phone', 'password1', 'password2')
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Choose a username'
+            }),
+        }
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone:
+            # Basic phone validation
+            phone_pattern = r'^[\d\s\-\+\(\)]{10,}$'
+            if not re.match(phone_pattern, phone):
+                raise ValidationError('Please enter a valid phone number.')
+        return phone
+
+class PatientRegistrationForm(forms.ModelForm):
+    date_of_birth = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+    class Meta:
+        model = Patient
+        fields = ('gender', 'blood_group', 'height', 'weight', 'emergency_contact',
+                  'allergies', 'medical_history')
+        widgets = {
+            'gender': forms.Select(attrs={'class': 'form-select'}),
+            'blood_group': forms.Select(attrs={'class': 'form-select'}),
+            'height': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Height in cm',
+                'step': '0.1'
+            }),
+            'weight': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Weight in kg',
+                'step': '0.1'
+            }),
+            'emergency_contact': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Emergency contact number'
+            }),
+            'allergies': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'List any known allergies'
+            }),
+            'medical_history': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Any relevant medical history'
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        height = cleaned_data.get('height')
+        weight = cleaned_data.get('weight')
+
+        if height and height <= 0:
+            self.add_error('height', 'Height must be positive.')
+
+        if weight and weight <= 0:
+            self.add_error('weight', 'Weight must be positive.')
+
+        return cleaned_data
+
+class DoctorRegistrationForm(forms.ModelForm):
+    email = forms.EmailField(required=True)
+    first_name = forms.CharField(max_length=30, required=True)
+    last_name = forms.CharField(max_length=30, required=True)
+    phone = forms.CharField(max_length=15, required=True)
+
+    consultation_fee = forms.DecimalField(
+        min_value=0,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01'
+        })
+    )
+
+    working_hours_start = forms.TimeField(
+        widget=forms.TimeInput(attrs={
+            'type': 'time',
+            'class': 'form-control'
+        })
+    )
+
+    working_hours_end = forms.TimeField(
+        widget=forms.TimeInput(attrs={
+            'type': 'time',
+            'class': 'form-control'
+        })
+    )
+
+    class Meta:
+        model = Doctor
+        fields = ('department', 'qualification', 'specialization', 'experience',
+                  'consultation_fee', 'license_number', 'bio', 'working_hours_start',
+                  'working_hours_end', 'max_patients_per_day')
+        widgets = {
+            'department': forms.Select(attrs={'class': 'form-select'}),
+            'qualification': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., MD Cardiology'
+            }),
+            'specialization': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., Heart Surgery'
+            }),
+            'experience': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0'
+            }),
+            'license_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Medical license number'
+            }),
+            'bio': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Doctor biography and expertise'
+            }),
+            'max_patients_per_day': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1',
+                'max': '50'
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('working_hours_start')
+        end_time = cleaned_data.get('working_hours_end')
+
+        if start_time and end_time and start_time >= end_time:
+            self.add_error('working_hours_end', 'End time must be after start time.')
+
+        return cleaned_data
+
+class AppointmentForm(forms.ModelForm):
+    date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+    time = forms.TimeField(
+        widget=forms.TimeInput(attrs={
+            'type': 'time',
+            'class': 'form-control'
+        })
+    )
+
+    class Meta:
+        model = Appointment
+        fields = ('doctor', 'date', 'time', 'reason', 'symptoms', 'appointment_type', 'is_urgent')
+        widgets = {
+            'doctor': forms.Select(attrs={'class': 'form-select'}),
+            'reason': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Reason for appointment'
+            }),
+            'symptoms': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Describe your symptoms (optional)'
+            }),
+            'appointment_type': forms.Select(attrs={'class': 'form-select'}),
+            'is_urgent': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only show available doctors
+        self.fields['doctor'].queryset = Doctor.objects.filter(is_available=True, is_active=True)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        doctor = cleaned_data.get('doctor')
+        date = cleaned_data.get('date')
+        time = cleaned_data.get('time')
+
+        if doctor and date and time:
+            # Check if doctor has reached max patients for the day
+            daily_appointments = Appointment.objects.filter(
+                doctor=doctor,
+                date=date
+            ).count()
+
+            if daily_appointments >= doctor.max_patients_per_day:
+                raise ValidationError(
+                    f'Doctor has reached the maximum appointments ({doctor.max_patients_per_day}) for this day.'
+                )
+
+            # Check for conflicting appointments
+            conflicting = Appointment.objects.filter(
+                doctor=doctor,
+                date=date,
+                time=time,
+                status__in=['pending', 'confirmed', 'in_progress']
+            ).exists()
+
+            if conflicting:
+                raise ValidationError('This time slot is already booked. Please choose another time.')
+
+            # Check if time is within doctor's working hours
+            if time < doctor.working_hours_start or time > doctor.working_hours_end:
+                raise ValidationError(
+                    f'Doctor is only available between {doctor.working_hours_start} and {doctor.working_hours_end}'
+                )
+
+        return cleaned_data
+
+class PrescriptionForm(forms.ModelForm):
+    class Meta:
+        model = Prescription
+        fields = ('medicine_name', 'dosage', 'frequency', 'duration', 'quantity',
+                  'instructions', 'advice', 'max_refills')
+        widgets = {
+            'medicine_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Medicine name'
+            }),
+            'dosage': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., 500mg'
+            }),
+            'frequency': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., 3 times daily'
+            }),
+            'duration': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., 7 days'
+            }),
+            'quantity': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., 30 tablets'
+            }),
+            'instructions': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Specific instructions for taking the medicine'
+            }),
+            'advice': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Medical advice and precautions'
+            }),
+            'max_refills': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0'
+            }),
+        }
+
+class BillingForm(forms.ModelForm):
+    class Meta:
+        model = Billing
+        fields = ('consultation_fee', 'medicine_charges', 'test_charges',
+                  'other_charges', 'tax_amount', 'discount', 'payment_method',
+                  'insurance_coverage', 'notes', 'due_date')
+        widgets = {
+            'consultation_fee': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'medicine_charges': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'test_charges': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'other_charges': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'tax_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'discount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'insurance_coverage': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2
+            }),
+            'due_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Calculate total amount
+        consultation_fee = cleaned_data.get('consultation_fee', 0)
+        medicine_charges = cleaned_data.get('medicine_charges', 0)
+        test_charges = cleaned_data.get('test_charges', 0)
+        other_charges = cleaned_data.get('other_charges', 0)
+        tax_amount = cleaned_data.get('tax_amount', 0)
+        discount = cleaned_data.get('discount', 0)
+
+        subtotal = consultation_fee + medicine_charges + test_charges + other_charges
+        total = subtotal + tax_amount - discount
+
+        if total < 0:
+            raise ValidationError('Total amount cannot be negative.')
+
+        cleaned_data['total_amount'] = total
+        return cleaned_data
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ('amount', 'payment_method', 'transaction_id', 'notes')
+        widgets = {
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': 'Payment amount'
+            }),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'transaction_id': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Transaction ID (optional)'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Payment notes (optional)'
+            }),
+        }
+
+class MedicalRecordForm(forms.ModelForm):
+    class Meta:
+        model = MedicalRecord
+        fields = ('record_type', 'title', 'description', 'file', 'findings',
+                  'recommendations', 'is_critical')
+        widgets = {
+            'record_type': forms.Select(attrs={'class': 'form-select'}),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Record title'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Record description'
+            }),
+            'file': forms.FileInput(attrs={'class': 'form-control'}),
+            'findings': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Medical findings'
+            }),
+            'recommendations': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Recommendations'
+            }),
+            'is_critical': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class TestForm(forms.ModelForm):
+    test_date = forms.DateField(
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+    result_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+    class Meta:
+        model = Test
+        fields = ('test_type', 'test_name', 'description', 'test_date', 'notes')
+        widgets = {
+            'test_type': forms.Select(attrs={'class': 'form-select'}),
+            'test_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Test name'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Test description'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Additional notes'
+            }),
+        }
+
+class InventoryForm(forms.ModelForm):
+    expiry_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+    class Meta:
+        model = Inventory
+        fields = ('name', 'category', 'description', 'quantity', 'unit',
+                  'reorder_level', 'unit_price', 'supplier', 'expiry_date',
+                  'location', 'is_active')
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Item name'
+            }),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Item description'
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0'
+            }),
+            'unit': forms.Select(attrs={'class': 'form-select'}),
+            'reorder_level': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0'
+            }),
+            'unit_price': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'supplier': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Supplier name'
+            }),
+            'location': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Storage location'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class RoomForm(forms.ModelForm):
+    class Meta:
+        model = Room
+        fields = ('room_number', 'room_type', 'department', 'capacity',
+                  'is_available', 'features')
+        widgets = {
+            'room_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Room number'
+            }),
+            'room_type': forms.Select(attrs={'class': 'form-select'}),
+            'department': forms.Select(attrs={'class': 'form-select'}),
+            'capacity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1'
+            }),
+            'is_available': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'features': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Room features and equipment'
+            }),
+        }
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email', 'phone', 'address', 'profile_picture')
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3
+            }),
+            'profile_picture': forms.FileInput(attrs={'class': 'form-control'}),
+        }
+
+class PatientUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Patient
+        fields = ('age', 'gender', 'blood_group', 'height', 'weight',
+                  'emergency_contact', 'allergies', 'medical_history',
+                  'current_medications', 'insurance_provider', 'insurance_policy_number')
+        widgets = {
+            'age': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'max': '150'
+            }),
+            'gender': forms.Select(attrs={'class': 'form-select'}),
+            'blood_group': forms.Select(attrs={'class': 'form-select'}),
+            'height': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.1'
+            }),
+            'weight': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.1'
+            }),
+            'emergency_contact': forms.TextInput(attrs={'class': 'form-control'}),
+            'allergies': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2
+            }),
+            'medical_history': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3
+            }),
+            'current_medications': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2
+            }),
+            'insurance_provider': forms.TextInput(attrs={'class': 'form-control'}),
+            'insurance_policy_number': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+class DoctorUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Doctor
+        fields = ('department', 'qualification', 'specialization', 'experience',
+                  'consultation_fee', 'license_number', 'bio', 'working_hours_start',
+                  'working_hours_end', 'max_patients_per_day', 'is_available')
+        widgets = {
+            'department': forms.Select(attrs={'class': 'form-select'}),
+            'qualification': forms.TextInput(attrs={'class': 'form-control'}),
+            'specialization': forms.TextInput(attrs={'class': 'form-control'}),
+            'experience': forms.NumberInput(attrs={'class': 'form-control'}),
+            'consultation_fee': forms.NumberInput(attrs={'class': 'form-control'}),
+            'license_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'bio': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'working_hours_start': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'working_hours_end': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'max_patients_per_day': forms.NumberInput(attrs={'class': 'form-control'}),
+            'is_available': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class ContactForm(forms.Form):
+    name = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Your name'
+        })
+    )
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Your email'
+        })
+    )
+    phone = forms.CharField(
+        max_length=15,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Your phone number'
+        })
+    )
+    subject = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Subject'
+        })
+    )
+    message = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 5,
+            'placeholder': 'Your message'
+        })
+    )
+
+class AppointmentStatusForm(forms.ModelForm):
+    class Meta:
+        model = Appointment
+        fields = ('status', 'notes')
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Additional notes'
+            }),
+        }
+
+class TestResultForm(forms.ModelForm):
+    class Meta:
+        model = Test
+        fields = ('status', 'result', 'result_file', 'result_date')
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'result': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 5,
+                'placeholder': 'Test results'
+            }),
+            'result_file': forms.FileInput(attrs={'class': 'form-control'}),
+            'result_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+        }
+
+
+
+
+
+from django.utils import timezone
+from django.contrib import messages
+from .models import Notification
+import threading
+
+class UserActivityMiddleware:
+    """
+    Middleware to track user activity and update last seen timestamp.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            # Update last login time
+            request.user.last_login = timezone.now()
+            request.user.save(update_fields=['last_login'])
+
+        response = self.get_response(request)
+        return response
+
+class NotificationMiddleware:
+    """
+    Middleware to add unread notifications count to request context.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            unread_count = Notification.objects.filter(
+                user=request.user,
+                is_read=False
+            ).count()
+            request.unread_notifications_count = unread_count
+        else:
+            request.unread_notifications_count = 0
+
+        response = self.get_response(request)
+        return response
+
+    def process_template_response(self, request, response):
+        if hasattr(response, 'context_data'):
+            if response.context_data is None:
+                response.context_data = {}
+            response.context_data['unread_notifications_count'] = getattr(
+                request, 'unread_notifications_count', 0
+            )
+        return response
+
+class SecurityHeadersMiddleware:
+    """
+    Middleware to add security headers to responses.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Add security headers
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['X-Frame-Options'] = 'DENY'
+        response['X-XSS-Protection'] = '1; mode=block'
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        # CSP Header (Content Security Policy)
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; "
+            "style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
+        response['Content-Security-Policy'] = csp
+
+        return response
+
+class RequestLoggingMiddleware:
+    """
+    Middleware to log requests for debugging and monitoring.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Log request information (in production, use proper logging)
+        import logging
+        logger = logging.getLogger('request')
+
+        log_data = {
+            'method': request.method,
+            'path': request.path,
+            'user': str(request.user) if request.user.is_authenticated else 'anonymous',
+            'ip': request.META.get('REMOTE_ADDR'),
+            'user_agent': request.META.get('HTTP_USER_AGENT', ''),
+        }
+
+        logger.info(f"Request: {log_data}")
+
+        response = self.get_response(request)
+
+        # Log response information
+        log_data.update({
+            'status': response.status_code,
+            'content_type': response.get('Content-Type', ''),
+        })
+
+        logger.info(f"Response: {log_data}")
+
+        return response
+
+class MaintenanceModeMiddleware:
+    """
+    Middleware to enable maintenance mode.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Check if maintenance mode is enabled
+        from django.conf import settings
+
+        if getattr(settings, 'MAINTENANCE_MODE', False):
+            # Allow staff users and login page
+            if (request.user.is_staff or
+                request.path.startswith('/admin/') or
+                request.path == '/login/'):
+                return self.get_response(request)
+
+            # Show maintenance page for others
+            from django.shortcuts import render
+            return render(request, 'maintenance.html', status=503)
+
+        return self.get_response(request)
+
+
+
+
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+from datetime import timedelta
+import uuid
+
+class User(AbstractUser):
+    ROLE_CHOICES = (
+        ('admin', 'Admin'),
+        ('doctor', 'Doctor'),
+        ('patient', 'Patient'),
+        ('receptionist', 'Receptionist'),
+    )
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='patient')
+    phone = models.CharField(max_length=15, blank=True)
+    address = models.TextField(blank=True)
+    profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    verification_token = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_joined']
+        indexes = [
+            models.Index(fields=['role']),
+            models.Index(fields=['email']),
+            models.Index(fields=['username']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_full_name()} ({self.role})"
+
+    def get_full_name(self):
+        full_name = f"{self.first_name} {self.last_name}"
+        return full_name.strip() if full_name.strip() else self.username
+
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField()
+    icon = models.CharField(max_length=50, default='fa-heartbeat')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def doctor_count(self):
+        return self.doctor_set.filter(is_active=True).count()
+
+class Doctor(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='doctor_profile')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True)
+    qualification = models.CharField(max_length=200)
+    specialization = models.CharField(max_length=200, blank=True)
+    experience = models.IntegerField(default=0)
+    consultation_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    bio = models.TextField(blank=True)
+    license_number = models.CharField(max_length=100, blank=True)
+    is_available = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    working_hours_start = models.TimeField(default='09:00')
+    working_hours_end = models.TimeField(default='17:00')
+    max_patients_per_day = models.IntegerField(default=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['department']),
+            models.Index(fields=['is_available']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return f"Dr. {self.user.get_full_name()}"
+
+    @property
+    def average_rating(self):
+        ratings = self.doctorrating_set.all()
+        if ratings.exists():
+            return sum(r.rating for r in ratings) / ratings.count()
+        return 0
+
+    @property
+    def available_slots(self):
+        # Calculate available slots based on appointments
+        today = timezone.now().date()
+        appointments = self.appointment_set.filter(date=today).values_list('time', flat=True)
+        all_slots = self.generate_time_slots()
+        return [slot for slot in all_slots if slot not in appointments]
+
+    def generate_time_slots(self):
+        slots = []
+        start_hour = int(self.working_hours_start.hour)
+        end_hour = int(self.working_hours_end.hour)
+
+        for hour in range(start_hour, end_hour):
+            slots.append(f"{hour:02d}:00")
+            slots.append(f"{hour:02d}:30")
+
+        return slots
+
+class Patient(models.Model):
+    GENDER_CHOICES = (
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+    )
+
+    BLOOD_GROUP_CHOICES = (
+        ('A+', 'A+'),
+        ('A-', 'A-'),
+        ('B+', 'B+'),
+        ('B-', 'B-'),
+        ('AB+', 'AB+'),
+        ('AB-', 'AB-'),
+        ('O+', 'O+'),
+        ('O-', 'O-'),
+    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='patient_profile')
+    age = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(150)])
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
+    blood_group = models.CharField(max_length=5, choices=BLOOD_GROUP_CHOICES, blank=True)
+    height = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    weight = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    emergency_contact = models.CharField(max_length=15, blank=True)
+    allergies = models.TextField(blank=True)
+    medical_history = models.TextField(blank=True)
+    current_medications = models.TextField(blank=True)
+    insurance_provider = models.CharField(max_length=100, blank=True)
+    insurance_policy_number = models.CharField(max_length=100, blank=True)
+    registration_date = models.DateTimeField(auto_now_add=True)
+    last_visit = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-registration_date']
+        indexes = [
+            models.Index(fields=['gender']),
+            models.Index(fields=['blood_group']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self):
+        return self.user.get_full_name()
+
+    @property
+    def bmi(self):
+        if self.height and self.weight:
+            height_m = self.height / 100
+            return round(self.weight / (height_m * height_m), 2)
+        return None
+
+    @property
+    def appointment_count(self):
+        return self.appointment_set.count()
+
+    @property
+    def upcoming_appointments(self):
+        return self.appointment_set.filter(date__gte=timezone.now().date()).count()
+
+class Appointment(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('no_show', 'No Show'),
+    )
+
+    APPOINTMENT_TYPE_CHOICES = (
+        ('in_person', 'In Person'),
+        ('telemedicine', 'Telemedicine'),
+        ('follow_up', 'Follow Up'),
+        ('emergency', 'Emergency'),
+    )
+
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    date = models.DateField()
+    time = models.TimeField()
+    end_time = models.TimeField(null=True, blank=True)
+    reason = models.TextField()
+    symptoms = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    appointment_type = models.CharField(max_length=20, choices=APPOINTMENT_TYPE_CHOICES, default='in_person')
+    notes = models.TextField(blank=True)
+    is_urgent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    reminder_sent = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-date', '-time']
+        unique_together = ['doctor', 'date', 'time']
+        indexes = [
+            models.Index(fields=['date', 'time']),
+            models.Index(fields=['status']),
+            models.Index(fields=['patient', 'doctor']),
+        ]
+
+    def __str__(self):
+        return f"{self.patient} - {self.doctor} - {self.date} {self.time}"
+
+    def save(self, *args, **kwargs):
+        if not self.department and self.doctor:
+            self.department = self.doctor.department
+        if not self.end_time:
+            # Calculate end time (30 minutes by default)
+            self.end_time = (timezone.datetime.combine(self.date, self.time) +
+                           timedelta(minutes=30)).time()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_upcoming(self):
+        now = timezone.now()
+        appointment_datetime = timezone.make_aware(
+            timezone.datetime.combine(self.date, self.time)
+        )
+        return appointment_datetime > now and self.status in ['pending', 'confirmed']
+
+    @property
+    def duration_minutes(self):
+        if self.end_time:
+            start = timezone.datetime.combine(self.date, self.time)
+            end = timezone.datetime.combine(self.date, self.end_time)
+            return (end - start).seconds // 60
+        return 30
+
+class Prescription(models.Model):
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='prescriptions')
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    medicine_name = models.CharField(max_length=200)
+    dosage = models.CharField(max_length=100)
+    frequency = models.CharField(max_length=100, blank=True)
+    duration = models.CharField(max_length=100)
+    quantity = models.CharField(max_length=100, blank=True)
+    instructions = models.TextField(blank=True)
+    advice = models.TextField()
+    is_active = models.BooleanField(default=True)
+    refill_count = models.IntegerField(default=0)
+    max_refills = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['patient', 'doctor']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.patient} - {self.medicine_name}"
+
+class Billing(models.Model):
+    PAYMENT_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('partial', 'Partially Paid'),
+        ('paid', 'Paid'),
+        ('overdue', 'Overdue'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    PAYMENT_METHOD_CHOICES = (
+        ('cash', 'Cash'),
+        ('card', 'Credit/Debit Card'),
+        ('insurance', 'Insurance'),
+        ('online', 'Online Payment'),
+        ('cheque', 'Cheque'),
+    )
+
+    appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE, related_name='billing')
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True)
+    bill_number = models.CharField(max_length=50, unique=True)
+    consultation_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    medicine_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    test_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    other_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    paid_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    due_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, blank=True)
+    insurance_coverage = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    due_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['bill_number']),
+            models.Index(fields=['payment_status']),
+            models.Index(fields=['patient', 'doctor']),
+        ]
+
+    def __str__(self):
+        return f"Bill {self.bill_number} - {self.patient}"
+
+    def save(self, *args, **kwargs):
+        if not self.bill_number:
+            self.bill_number = f"BILL-{uuid.uuid4().hex[:8].upper()}"
+
+        # Calculate due amount
+        self.due_amount = self.total_amount - self.paid_amount
+
+        # Update payment status
+        if self.paid_amount == 0:
+            self.payment_status = 'pending'
+        elif self.paid_amount < self.total_amount:
+            self.payment_status = 'partial'
+        elif self.paid_amount >= self.total_amount:
+            self.payment_status = 'paid'
+
+        if not self.due_date:
+            self.due_date = timezone.now().date() + timedelta(days=15)
+
+        super().save(*args, **kwargs)
+
+class Payment(models.Model):
+    bill = models.ForeignKey(Billing, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=20, choices=Billing.PAYMENT_METHOD_CHOICES)
+    transaction_id = models.CharField(max_length=100, blank=True)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-payment_date']
+
+    def __str__(self):
+        return f"Payment of ${self.amount} for {self.bill}"
+
+class MedicalRecord(models.Model):
+    RECORD_TYPE_CHOICES = (
+        ('diagnosis', 'Diagnosis'),
+        ('lab_result', 'Lab Result'),
+        ('xray', 'X-Ray'),
+        ('scan', 'Scan'),
+        ('prescription', 'Prescription'),
+        ('progress_note', 'Progress Note'),
+        ('discharge_summary', 'Discharge Summary'),
+    )
+
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='medical_records')
+    doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True, blank=True)
+    appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL, null=True, blank=True)
+    record_type = models.CharField(max_length=20, choices=RECORD_TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    file = models.FileField(upload_to='medical_records/', blank=True, null=True)
+    findings = models.TextField(blank=True)
+    recommendations = models.TextField(blank=True)
+    is_critical = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['patient', 'record_type']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.patient} - {self.title}"
+
+class Test(models.Model):
+    TEST_TYPE_CHOICES = (
+        ('blood_test', 'Blood Test'),
+        ('urine_test', 'Urine Test'),
+        ('xray', 'X-Ray'),
+        ('mri', 'MRI'),
+        ('ct_scan', 'CT Scan'),
+        ('ultrasound', 'Ultrasound'),
+        ('ecg', 'ECG'),
+        ('other', 'Other'),
+    )
+
+    TEST_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='tests')
+    doctor = models.ForeignKey(Doctor, on_delete=models.SET_NULL, null=True, blank=True)
+    appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL, null=True, blank=True)
+    test_type = models.CharField(max_length=20, choices=TEST_TYPE_CHOICES)
+    test_name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=TEST_STATUS_CHOICES, default='pending')
+    result = models.TextField(blank=True)
+    result_file = models.FileField(upload_to='test_results/', blank=True, null=True)
+    test_date = models.DateField()
+    result_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-test_date']
+
+    def __str__(self):
+        return f"{self.patient} - {self.test_name}"
+
+class Room(models.Model):
+    ROOM_TYPE_CHOICES = (
+        ('consultation', 'Consultation Room'),
+        ('operation', 'Operation Theater'),
+        ('emergency', 'Emergency Room'),
+        ('ward', 'Ward'),
+        ('icu', 'ICU'),
+        ('lab', 'Laboratory'),
+    )
+
+    room_number = models.CharField(max_length=20, unique=True)
+    room_type = models.CharField(max_length=20, choices=ROOM_TYPE_CHOICES)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    capacity = models.IntegerField(default=1)
+    is_available = models.BooleanField(default=True)
+    features = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['room_number']
+
+    def __str__(self):
+        return f"Room {self.room_number}"
+
+class Inventory(models.Model):
+    CATEGORY_CHOICES = (
+        ('medicine', 'Medicine'),
+        ('equipment', 'Equipment'),
+        ('consumable', 'Consumable'),
+        ('furniture', 'Furniture'),
+        ('other', 'Other'),
+    )
+
+    UNIT_CHOICES = (
+        ('piece', 'Piece'),
+        ('box', 'Box'),
+        ('bottle', 'Bottle'),
+        ('pack', 'Pack'),
+        ('ml', 'ml'),
+        ('mg', 'mg'),
+        ('other', 'Other'),
+    )
+
+    name = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    description = models.TextField(blank=True)
+    quantity = models.IntegerField(default=0)
+    unit = models.CharField(max_length=20, choices=UNIT_CHOICES)
+    reorder_level = models.IntegerField(default=10)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    supplier = models.CharField(max_length=200, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=100, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name_plural = 'Inventory'
+
+    def __str__(self):
+        return f"{self.name} ({self.quantity} {self.unit})"
+
+    @property
+    def needs_reorder(self):
+        return self.quantity <= self.reorder_level
+
+class Notification(models.Model):
+    NOTIFICATION_TYPE_CHOICES = (
+        ('appointment', 'Appointment'),
+        ('prescription', 'Prescription'),
+        ('billing', 'Billing'),
+        ('system', 'System'),
+        ('reminder', 'Reminder'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    related_object_id = models.IntegerField(null=True, blank=True)
+    related_object_type = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.title}"
+
+class DoctorRating(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
+    doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    review = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['patient', 'doctor']
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.patient} rated Dr. {self.doctor.user.last_name} {self.rating} stars"
+
+class HospitalSetting(models.Model):
+    key = models.CharField(max_length=100, unique=True)
+    value = models.TextField()
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['key']
+
+    def __str__(self):
+        return self.key
+
+# Signals for automatic actions
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+
+@receiver(post_save, sender=Appointment)
+def create_appointment_notification(sender, instance, created, **kwargs):
+    if created:
+        # Create notification for patient
+        Notification.objects.create(
+            user=instance.patient.user,
+            notification_type='appointment',
+            title='New Appointment Scheduled',
+            message=f'Your appointment with Dr. {instance.doctor.user.get_full_name()} is scheduled for {instance.date} at {instance.time}',
+            related_object_id=instance.id,
+            related_object_type='appointment'
+        )
+
+        # Create notification for doctor
+        Notification.objects.create(
+            user=instance.doctor.user,
+            notification_type='appointment',
+            title='New Appointment',
+            message=f'You have a new appointment with {instance.patient.user.get_full_name()} on {instance.date} at {instance.time}',
+            related_object_id=instance.id,
+            related_object_type='appointment'
+        )
+
+@receiver(post_save, sender=Billing)
+def create_billing_notification(sender, instance, created, **kwargs):
+    if created:
+        Notification.objects.create(
+            user=instance.patient.user,
+            notification_type='billing',
+            title='New Bill Generated',
+            message=f'Bill #{instance.bill_number} for amount ${instance.total_amount} has been generated',
+            related_object_id=instance.id,
+            related_object_type='billing'
+        )
+
+@receiver(post_save, sender=Prescription)
+def create_prescription_notification(sender, instance, created, **kwargs):
+    if created:
+        Notification.objects.create(
+            user=instance.patient.user,
+            notification_type='prescription',
+            title='New Prescription',
+            message=f'Dr. {instance.doctor.user.get_full_name()} has prescribed {instance.medicine_name}',
+            related_object_id=instance.id,
+            related_object_type='prescription'
+        )
+
+from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from . import views
+
+urlpatterns = [
+    # ==================== Public URLs ====================
+    path('', views.home, name='home'),
+    path('about/', views.about, name='about'),
+    path('departments/', views.departments, name='departments'),
+    path('contact/', views.contact, name='contact'),
+    path('doctors/', views.doctor_list, name='doctor_list'),
+    path('doctors/<int:pk>/', views.doctor_detail, name='doctor_detail'),
+
+    # ==================== Authentication URLs ====================
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('register/', views.patient_register, name='register'),
+
+    # Password reset URLs
+    path('password-reset/',
+         auth_views.PasswordResetView.as_view(
+             template_name='auth/password_reset.html'
+         ),
+         name='password_reset'),
+    path('password-reset/done/',
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='auth/password_reset_done.html'
+         ),
+         name='password_reset_done'),
+    path('password-reset-confirm/<uidb64>/<token>/',
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='auth/password_reset_confirm.html'
+         ),
+         name='password_reset_confirm'),
+    path('password-reset-complete/',
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='auth/password_reset_complete.html'
+         ),
+         name='password_reset_complete'),
+
+    # ==================== Dashboard URLs ====================
+    path('dashboard/', views.dashboard, name='dashboard'),
+
+    # ==================== Admin URLs ====================
+    path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin/doctors/', views.manage_doctors, name='manage_doctors'),
+    path('admin/patients/', views.manage_patients, name='manage_patients'),
+    path('admin/appointments/', views.manage_appointments, name='manage_appointments'),
+    path('admin/billing/', views.manage_billing, name='manage_billing'),
+    path('admin/reports/', views.admin_reports, name='admin_reports'),
+    path('admin/settings/', views.admin_settings, name='admin_settings'),
+
+    # ==================== Doctor URLs ====================
+    path('doctor/dashboard/', views.doctor_dashboard, name='doctor_dashboard'),
+    path('doctor/appointments/', views.doctor_appointments, name='doctor_appointments'),
+    path('doctor/patients/', views.doctor_patients, name='doctor_patients'),
+    path('doctor/prescriptions/', views.doctor_prescriptions, name='doctor_prescriptions'),
+    path('doctor/prescriptions/create/', views.create_prescription, name='create_prescription'),
+    path('doctor/prescriptions/create/<int:appointment_id>/', views.create_prescription, name='create_prescription_for_appointment'),
+    path('doctor/schedule/', views.doctor_schedule, name='doctor_schedule'),
+    path('doctor/profile/', views.doctor_profile, name='doctor_profile'),
+    path('doctor/appointments/<int:appointment_id>/update-status/',
+         views.update_appointment_status, name='update_appointment_status'),
+
+    # ==================== Patient URLs ====================
+    path('patient/dashboard/', views.patient_dashboard, name='patient_dashboard'),
+    path('patient/appointments/', views.patient_appointments, name='patient_appointments'),
+    path('patient/appointments/book/', views.book_appointment, name='book_appointment'),
+    path('patient/prescriptions/', views.patient_prescriptions, name='patient_prescriptions'),
+    path('patient/medical-records/', views.patient_medical_records, name='patient_medical_records'),
+    path('patient/billing/', views.patient_billing, name='patient_billing'),
+    path('patient/profile/', views.patient_profile, name='patient_profile'),
+
+    # ==================== Common URLs ====================
+    path('profile/update/', views.update_profile, name='update_profile'),
+    path('notifications/', views.notifications, name='notifications'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+
+    # ==================== AJAX URLs ====================
+    path('ajax/get-slots/', views.get_available_slots, name='get_available_slots'),
+    path('ajax/check-availability/', views.check_appointment_availability, name='check_appointment_availability'),
+    path('ajax/patients/<int:patient_id>/', views.get_patient_details, name='get_patient_details'),
+    path('ajax/search/doctors/', views.search_doctors, name='search_doctors'),
+    path('ajax/search/patients/', views.search_patients, name='search_patients'),
+
+    # ==================== PDF URLs ====================
+    path('prescriptions/<int:prescription_id>/pdf/', views.generate_prescription_pdf, name='generate_prescription_pdf'),
+    path('bills/<int:bill_id>/pdf/', views.generate_bill_pdf, name='generate_bill_pdf'),
+]
+
+# Error handlers
+handler404 = views.handler404
+handler500 = views.handler500
+handler403 = views.handler403
+handler400 = views.handler400
+
+
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q, Count, Sum, Avg, F, Value
+from django.db.models.functions import TruncDate, ExtractWeek, ExtractMonth, ExtractYear
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import View, ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse, reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
+from datetime import datetime, date, timedelta
+import json
+import csv
+from io import StringIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
+import io
+
+from .models import *
+from .forms import *
+from .decorators import *
+
+# ==================== Public Views ====================
+
+def home(request):
+    """Home page view"""
+    doctors = Doctor.objects.filter(is_available=True, is_active=True).select_related(
+        'user', 'department'
+    )[:8]
+
+    departments = Department.objects.all()[:6]
+
+    # Statistics for display
+    stats = {
+        'doctors': Doctor.objects.filter(is_active=True).count(),
+        'patients': Patient.objects.filter(is_active=True).count(),
+        'departments': Department.objects.count(),
+        'experience': Doctor.objects.aggregate(total=Sum('experience'))['total'] or 0
+    }
+
+    context = {
+        'doctors': doctors,
+        'departments': departments,
+        'stats': stats,
+    }
+    return render(request, 'public/index.html', context)
+
+def about(request):
+    """About page view"""
+    return render(request, 'public/about.html')
+
+def departments(request):
+    """Departments listing view"""
+    departments = Department.objects.annotate(
+        doctor_count=Count('doctor', filter=Q(doctor__is_active=True))
+    ).order_by('name')
+
+    context = {
+        'departments': departments,
+    }
+    return render(request, 'public/departments.html', context)
+
+def contact(request):
+    """Contact page view"""
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            # Save contact message (in a real app, you'd save to database)
+            name = form.cleaned_data['name']
+            email = form.cleaned_data['email']
+            subject = form.cleaned_data['subject']
+            message = form.cleaned_data['message']
+
+            # Here you would typically send an email
+            messages.success(
+                request,
+                f'Thank you {name}! Your message has been sent. We will contact you soon.'
+            )
+            return redirect('contact')
+    else:
+        form = ContactForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'public/contact.html', context)
+
+def doctor_list(request):
+    """Public doctor listing view"""
+    doctors = Doctor.objects.filter(is_active=True).select_related(
+        'user', 'department'
+    ).order_by('user__last_name')
+
+    # Filtering
+    department_id = request.GET.get('department')
+    if department_id:
+        doctors = doctors.filter(department_id=department_id)
+
+    search = request.GET.get('search')
+    if search:
+        doctors = doctors.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(specialization__icontains=search) |
+            Q(qualification__icontains=search)
+        )
+
+    departments_list = Department.objects.all()
+
+    # Pagination
+    paginator = Paginator(doctors, 12)
+    page = request.GET.get('page')
+    try:
+        doctors = paginator.page(page)
+    except PageNotAnInteger:
+        doctors = paginator.page(1)
+    except EmptyPage:
+        doctors = paginator.page(paginator.num_pages)
+
+    context = {
+        'doctors': doctors,
+        'departments': departments_list,
+        'selected_department': department_id,
+        'search_query': search,
+    }
+    return render(request, 'public/doctors.html', context)
+
+def doctor_detail(request, pk):
+    """Public doctor detail view"""
+    doctor = get_object_or_404(
+        Doctor.objects.select_related('user', 'department'),
+        pk=pk,
+        is_active=True
+    )
+
+    # Get doctor's upcoming available slots
+    available_slots = doctor.generate_time_slots()
+
+    # Get doctor's reviews
+    reviews = DoctorRating.objects.filter(doctor=doctor).select_related('patient__user')
+
+    context = {
+        'doctor': doctor,
+        'available_slots': available_slots,
+        'reviews': reviews,
+    }
+    return render(request, 'public/doctor_detail.html', context)
+
+# ==================== Authentication Views ====================
+
+def login_view(request):
+    """User login view"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'Welcome back, {user.get_full_name()}!')
+
+            # Redirect based on role
+            next_url = request.GET.get('next')
+            if next_url:
+                return redirect(next_url)
+
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Invalid username or password.')
+
+    return render(request, 'auth/login.html')
+
+def logout_view(request):
+    """User logout view"""
+    logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('home')
+
+def patient_register(request):
+    """Patient registration view"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        user_form = CustomUserCreationForm(request.POST)
+        patient_form = PatientRegistrationForm(request.POST)
+
+        if user_form.is_valid() and patient_form.is_valid():
+            # Create user
+            user = user_form.save(commit=False)
+            user.role = 'patient'
+            user.save()
+
+            # Create patient
+            patient = patient_form.save(commit=False)
+            patient.user = user
+            patient.save()
+
+            # Calculate age from date of birth
+            dob_str = request.POST.get('date_of_birth')
+            if dob_str:
+                try:
+                    dob = datetime.strptime(dob_str, '%Y-%m-%d').date()
+                    today = date.today()
+                    age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+                    patient.age = age
+                    patient.save()
+                except ValueError:
+                    pass
+
+            # Authenticate and login
+            user = authenticate(
+                username=user_form.cleaned_data['username'],
+                password=user_form.cleaned_data['password1']
+            )
+            if user:
+                login(request, user)
+                messages.success(request, 'Registration successful! Welcome to MediCare.')
+                return redirect('patient_dashboard')
+    else:
+        user_form = CustomUserCreationForm()
+        patient_form = PatientRegistrationForm()
+
+    context = {
+        'user_form': user_form,
+        'patient_form': patient_form,
+    }
+    return render(request, 'auth/register.html', context)
+
+@login_required
+def dashboard(request):
+    """Dashboard redirect based on user role"""
+    user = request.user
+
+    if user.role == 'admin':
+        return redirect('admin_dashboard')
+    elif user.role == 'doctor':
+        return redirect('doctor_dashboard')
+    elif user.role == 'patient':
+        return redirect('patient_dashboard')
+    elif user.role == 'receptionist':
+        return redirect('receptionist_dashboard')
+
+    messages.warning(request, 'Unknown user role. Please contact administrator.')
+    return redirect('home')
+
+# ==================== Admin Views ====================
+
+@login_required
+@admin_required
+def admin_dashboard(request):
+    """Admin dashboard view"""
+    # Basic statistics
+    total_patients = Patient.objects.filter(is_active=True).count()
+    total_doctors = Doctor.objects.filter(is_active=True).count()
+    today = timezone.now().date()
+
+    today_appointments = Appointment.objects.filter(
+        date=today
+    ).count()
+
+    pending_appointments = Appointment.objects.filter(
+        status='pending'
+    ).count()
+
+    # Revenue statistics
+    revenue_data = Billing.objects.filter(
+        created_at__date=today
+    ).aggregate(
+        total=Sum('total_amount'),
+        paid=Sum('paid_amount'),
+        due=Sum('due_amount')
+    )
+
+    # Recent appointments
+    recent_appointments = Appointment.objects.select_related(
+        'patient__user', 'doctor__user'
+    ).order_by('-date', '-time')[:10]
+
+    # Doctors by department
+    doctors_by_dept = Department.objects.annotate(
+        doctor_count=Count('doctor', filter=Q(doctor__is_active=True))
+    ).order_by('-doctor_count')[:5]
+
+    # Monthly statistics
+    monthly_stats = get_monthly_statistics()
+
+    context = {
+        'total_patients': total_patients,
+        'total_doctors': total_doctors,
+        'today_appointments': today_appointments,
+        'pending_appointments': pending_appointments,
+        'revenue_total': revenue_data['total'] or 0,
+        'revenue_paid': revenue_data['paid'] or 0,
+        'revenue_due': revenue_data['due'] or 0,
+        'recent_appointments': recent_appointments,
+        'doctors_by_dept': doctors_by_dept,
+        'monthly_stats': monthly_stats,
+    }
+    return render(request, 'dashboard/admin/dashboard.html', context)
+
+@login_required
+@admin_required
+def manage_doctors(request):
+    """Admin: Manage doctors view"""
+    doctors = Doctor.objects.select_related('user', 'department').all()
+
+    # Filtering
+    search = request.GET.get('search', '')
+    department = request.GET.get('department', '')
+    availability = request.GET.get('availability', '')
+
+    if search:
+        doctors = doctors.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(user__email__icontains=search) |
+            Q(qualification__icontains=search)
+        )
+
+    if department:
+        doctors = doctors.filter(department_id=department)
+
+    if availability:
+        doctors = doctors.filter(is_available=(availability == 'available'))
+
+    # Add doctor form
+    if request.method == 'POST':
+        form = DoctorRegistrationForm(request.POST)
+        if form.is_valid():
+            # Create user first
+            username = form.cleaned_data['email'].split('@')[0]
+            password = User.objects.make_random_password()
+
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=form.cleaned_data['email'],
+                first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'],
+                phone=form.cleaned_data['phone'],
+                role='doctor'
+            )
+
+            # Create doctor profile
+            doctor = form.save(commit=False)
+            doctor.user = user
+            doctor.save()
+
+            # Send email with credentials (in production)
+            messages.success(
+                request,
+                f'Doctor {user.get_full_name()} created successfully! '
+                f'Username: {username}, Password: {password}'
+            )
+            return redirect('manage_doctors')
+    else:
+        form = DoctorRegistrationForm()
+
+    departments_list = Department.objects.all()
+
+    # Pagination
+    paginator = Paginator(doctors, 10)
+    page = request.GET.get('page')
+    try:
+        doctors = paginator.page(page)
+    except PageNotAnInteger:
+        doctors = paginator.page(1)
+    except EmptyPage:
+        doctors = paginator.page(paginator.num_pages)
+
+    context = {
+        'doctors': doctors,
+        'form': form,
+        'departments': departments_list,
+        'search_query': search,
+        'department_filter': department,
+        'availability_filter': availability,
+    }
+    return render(request, 'dashboard/admin/doctors.html', context)
+
+@login_required
+@admin_required
+def manage_patients(request):
+    """Admin: Manage patients view"""
+    patients = Patient.objects.select_related('user').filter(is_active=True)
+
+    # Filtering
+    search = request.GET.get('search', '')
+    gender = request.GET.get('gender', '')
+    blood_group = request.GET.get('blood_group', '')
+    age_min = request.GET.get('age_min')
+    age_max = request.GET.get('age_max')
+    reg_date_start = request.GET.get('reg_date_start')
+    reg_date_end = request.GET.get('reg_date_end')
+
+    if search:
+        patients = patients.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(user__email__icontains=search) |
+            Q(user__phone__icontains=search)
+        )
+
+    if gender:
+        patients = patients.filter(gender=gender)
+
+    if blood_group:
+        patients = patients.filter(blood_group=blood_group)
+
+    if age_min:
+        patients = patients.filter(age__gte=age_min)
+
+    if age_max:
+        patients = patients.filter(age__lte=age_max)
+
+    if reg_date_start:
+        patients = patients.filter(registration_date__date__gte=reg_date_start)
+
+    if reg_date_end:
+        patients = patients.filter(registration_date__date__lte=reg_date_end)
+
+    # Statistics
+    stats = {
+        'total': patients.count(),
+        'male': patients.filter(gender='M').count(),
+        'female': patients.filter(gender='F').count(),
+        'avg_age': patients.aggregate(avg=Avg('age'))['avg'] or 0,
+        'new_today': patients.filter(registration_date__date=timezone.now().date()).count(),
+    }
+
+    # Blood groups
+    blood_groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+
+    # Pagination
+    paginator = Paginator(patients, 10)
+    page = request.GET.get('page')
+    try:
+        patients = paginator.page(page)
+    except PageNotAnInteger:
+        patients = paginator.page(1)
+    except EmptyPage:
+        patients = paginator.page(paginator.num_pages)
+
+    context = {
+        'patients': patients,
+        'stats': stats,
+        'blood_groups': blood_groups,
+        'search_query': search,
+        'gender_filter': gender,
+        'blood_group_filter': blood_group,
+        'age_min_filter': age_min,
+        'age_max_filter': age_max,
+        'reg_date_start': reg_date_start,
+        'reg_date_end': reg_date_end,
+    }
+    return render(request, 'dashboard/admin/patients.html', context)
+
+@login_required
+@admin_required
+def manage_appointments(request):
+    """Admin: Manage appointments view"""
+    appointments = Appointment.objects.select_related(
+        'patient__user', 'doctor__user', 'department'
+    ).all()
+
+    # Filtering
+    status = request.GET.get('status', '')
+    date_filter = request.GET.get('date', '')
+    doctor_id = request.GET.get('doctor', '')
+    patient_id = request.GET.get('patient', '')
+
+    if status:
+        appointments = appointments.filter(status=status)
+
+    if date_filter:
+        appointments = appointments.filter(date=date_filter)
+
+    if doctor_id:
+        appointments = appointments.filter(doctor_id=doctor_id)
+
+    if patient_id:
+        appointments = appointments.filter(patient_id=patient_id)
+
+    # Statistics
+    stats = {
+        'total': appointments.count(),
+        'pending': appointments.filter(status='pending').count(),
+        'confirmed': appointments.filter(status='confirmed').count(),
+        'completed': appointments.filter(status='completed').count(),
+        'cancelled': appointments.filter(status='cancelled').count(),
+    }
+
+    doctors = Doctor.objects.filter(is_active=True)
+    patients = Patient.objects.filter(is_active=True)
+
+    # Pagination
+    paginator = Paginator(appointments, 10)
+    page = request.GET.get('page')
+    try:
+        appointments = paginator.page(page)
+    except PageNotAnInteger:
+        appointments = paginator.page(1)
+    except EmptyPage:
+        appointments = paginator.page(paginator.num_pages)
+
+    context = {
+        'appointments': appointments,
+        'stats': stats,
+        'doctors': doctors,
+        'patients': patients,
+        'status_filter': status,
+        'date_filter': date_filter,
+        'doctor_filter': doctor_id,
+        'patient_filter': patient_id,
+    }
+    return render(request, 'dashboard/admin/appointments.html', context)
+
+@login_required
+@admin_required
+def manage_billing(request):
+    """Admin: Manage billing view"""
+    bills = Billing.objects.select_related(
+        'patient__user', 'doctor__user', 'appointment'
+    ).all()
+
+    # Filtering
+    status = request.GET.get('status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    patient_id = request.GET.get('patient', '')
+
+    if status:
+        bills = bills.filter(payment_status=status)
+
+    if date_from:
+        bills = bills.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        bills = bills.filter(created_at__date__lte=date_to)
+
+    if patient_id:
+        bills = bills.filter(patient_id=patient_id)
+
+    # Statistics
+    stats = {
+        'total_revenue': bills.aggregate(total=Sum('total_amount'))['total'] or 0,
+        'total_paid': bills.aggregate(paid=Sum('paid_amount'))['paid'] or 0,
+        'total_due': bills.aggregate(due=Sum('due_amount'))['due'] or 0,
+        'pending': bills.filter(payment_status='pending').count(),
+        'partial': bills.filter(payment_status='partial').count(),
+        'paid': bills.filter(payment_status='paid').count(),
+    }
+
+    patients = Patient.objects.filter(is_active=True)
+
+    # Pagination
+    paginator = Paginator(bills, 10)
+    page = request.GET.get('page')
+    try:
+        bills = paginator.page(page)
+    except PageNotAnInteger:
+        bills = paginator.page(1)
+    except EmptyPage:
+        bills = paginator.page(paginator.num_pages)
+
+    context = {
+        'bills': bills,
+        'stats': stats,
+        'patients': patients,
+        'status_filter': status,
+        'date_from': date_from,
+        'date_to': date_to,
+        'patient_filter': patient_id,
+    }
+    return render(request, 'dashboard/admin/billing.html', context)
+
+@login_required
+@admin_required
+def admin_reports(request):
+    """Admin: Reports view"""
+    # Date range
+    date_from = request.GET.get('date_from', (timezone.now() - timedelta(days=30)).date())
+    date_to = request.GET.get('date_to', timezone.now().date())
+
+    # Appointment statistics
+    appointments = Appointment.objects.filter(
+        date__range=[date_from, date_to]
+    )
+
+    appointment_stats = {
+        'total': appointments.count(),
+        'by_status': appointments.values('status').annotate(count=Count('id')),
+        'by_department': appointments.values('department__name').annotate(count=Count('id')),
+        'by_doctor': appointments.values('doctor__user__first_name', 'doctor__user__last_name').annotate(count=Count('id')),
+    }
+
+    # Billing statistics
+    bills = Billing.objects.filter(
+        created_at__date__range=[date_from, date_to]
+    )
+
+    billing_stats = {
+        'total_revenue': bills.aggregate(total=Sum('total_amount'))['total'] or 0,
+        'revenue_by_day': bills.values('created_at__date').annotate(
+            total=Sum('total_amount'),
+            paid=Sum('paid_amount')
+        ).order_by('created_at__date'),
+        'by_payment_method': bills.values('payment_method').annotate(
+            count=Count('id'),
+            total=Sum('total_amount')
+        ),
+    }
+
+    # Patient statistics
+    patients = Patient.objects.filter(
+        registration_date__date__range=[date_from, date_to]
+    )
+
+    patient_stats = {
+        'new_patients': patients.count(),
+        'by_gender': patients.values('gender').annotate(count=Count('id')),
+        'by_age_group': {
+            '0-18': patients.filter(age__range=[0, 18]).count(),
+            '19-35': patients.filter(age__range=[19, 35]).count(),
+            '36-60': patients.filter(age__range=[36, 60]).count(),
+            '61+': patients.filter(age__gte=61).count(),
+        }
+    }
+
+    context = {
+        'date_from': date_from,
+        'date_to': date_to,
+        'appointment_stats': appointment_stats,
+        'billing_stats': billing_stats,
+        'patient_stats': patient_stats,
+    }
+    return render(request, 'dashboard/admin/reports.html', context)
+
+@login_required
+@admin_required
+def admin_settings(request):
+    """Admin: Settings view"""
+    if request.method == 'POST':
+        # Handle settings update
+        for key in request.POST:
+            if key.startswith('setting_'):
+                setting_key = key.replace('setting_', '')
+                value = request.POST[key]
+
+                setting, created = HospitalSetting.objects.get_or_create(
+                    key=setting_key,
+                    defaults={'value': value}
+                )
+
+                if not created:
+                    setting.value = value
+                    setting.save()
+
+        messages.success(request, 'Settings updated successfully!')
+        return redirect('admin_settings')
+
+    # Get current settings
+    settings = {
+        'hospital_name': HospitalSetting.objects.filter(key='hospital_name').first(),
+        'hospital_address': HospitalSetting.objects.filter(key='hospital_address').first(),
+        'hospital_phone': HospitalSetting.objects.filter(key='hospital_phone').first(),
+        'hospital_email': HospitalSetting.objects.filter(key='hospital_email').first(),
+        'consultation_fee_default': HospitalSetting.objects.filter(key='consultation_fee_default').first(),
+        'tax_rate': HospitalSetting.objects.filter(key='tax_rate').first(),
+        'appointment_reminder_hours': HospitalSetting.objects.filter(key='appointment_reminder_hours').first(),
+        'max_appointments_per_day': HospitalSetting.objects.filter(key='max_appointments_per_day').first(),
+    }
+
+    context = {
+        'settings': settings,
+    }
+    return render(request, 'dashboard/admin/settings.html', context)
+
+# ==================== Doctor Views ====================
+
+@login_required
+@doctor_required
+def doctor_dashboard(request):
+    """Doctor dashboard view"""
+    doctor = request.user.doctor_profile
+    today = timezone.now().date()
+
+    # Statistics
+    total_appointments = Appointment.objects.filter(doctor=doctor).count()
+    today_appointments = Appointment.objects.filter(
+        doctor=doctor,
+        date=today
+    ).count()
+
+    pending_appointments = Appointment.objects.filter(
+        doctor=doctor,
+        status='pending'
+    ).count()
+
+    total_patients = Patient.objects.filter(
+        appointment__doctor=doctor
+    ).distinct().count()
+
+    # Today's schedule
+    todays_schedule = Appointment.objects.filter(
+        doctor=doctor,
+        date=today,
+        status__in=['pending', 'confirmed']
+    ).select_related('patient__user').order_by('time')
+
+    # Recent patients
+    recent_patients = Patient.objects.filter(
+        appointment__doctor=doctor
+    ).distinct().select_related('user').order_by('-last_visit')[:5]
+
+    # Upcoming appointments
+    upcoming_appointments = Appointment.objects.filter(
+        doctor=doctor,
+        date__gte=today,
+        status__in=['pending', 'confirmed']
+    ).select_related('patient__user').order_by('date', 'time')[:5]
+
+    context = {
+        'doctor': doctor,
+        'total_appointments': total_appointments,
+        'today_appointments': today_appointments,
+        'pending_appointments': pending_appointments,
+        'total_patients': total_patients,
+        'todays_schedule': todays_schedule,
+        'recent_patients': recent_patients,
+        'upcoming_appointments': upcoming_appointments,
+    }
+    return render(request, 'dashboard/doctor/dashboard.html', context)
+
+@login_required
+@doctor_required
+def doctor_appointments(request):
+    """Doctor: My appointments view"""
+    doctor = request.user.doctor_profile
+    appointments = Appointment.objects.filter(
+        doctor=doctor
+    ).select_related('patient__user').order_by('-date', '-time')
+
+    # Filtering
+    status = request.GET.get('status', '')
+    date_filter = request.GET.get('date', '')
+    patient_search = request.GET.get('patient', '')
+
+    if status:
+        appointments = appointments.filter(status=status)
+
+    if date_filter:
+        appointments = appointments.filter(date=date_filter)
+
+    if patient_search:
+        appointments = appointments.filter(
+            Q(patient__user__first_name__icontains=patient_search) |
+            Q(patient__user__last_name__icontains=patient_search)
+        )
+
+    # Statistics
+    stats = {
+        'total': appointments.count(),
+        'pending': appointments.filter(status='pending').count(),
+        'confirmed': appointments.filter(status='confirmed').count(),
+        'completed': appointments.filter(status='completed').count(),
+    }
+
+    # Pagination
+    paginator = Paginator(appointments, 10)
+    page = request.GET.get('page')
+    try:
+        appointments = paginator.page(page)
+    except PageNotAnInteger:
+        appointments = paginator.page(1)
+    except EmptyPage:
+        appointments = paginator.page(paginator.num_pages)
+
+    context = {
+        'appointments': appointments,
+        'stats': stats,
+        'status_filter': status,
+        'date_filter': date_filter,
+        'patient_search': patient_search,
+    }
+    return render(request, 'dashboard/doctor/appointments.html', context)
+
+@login_required
+@doctor_required
+def doctor_patients(request):
+    """Doctor: My patients view"""
+    doctor = request.user.doctor_profile
+    patients = Patient.objects.filter(
+        appointment__doctor=doctor
+    ).distinct().select_related('user')
+
+    # Filtering
+    search = request.GET.get('search', '')
+    if search:
+        patients = patients.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(user__email__icontains=search)
+        )
+
+    # Statistics
+    stats = {
+        'total': patients.count(),
+        'male': patients.filter(gender='M').count(),
+        'female': patients.filter(gender='F').count(),
+        'avg_age': patients.aggregate(avg=Avg('age'))['avg'] or 0,
+    }
+
+    # Pagination
+    paginator = Paginator(patients, 10)
+    page = request.GET.get('page')
+    try:
+        patients = paginator.page(page)
+    except PageNotAnInteger:
+        patients = paginator.page(1)
+    except EmptyPage:
+        patients = paginator.page(paginator.num_pages)
+
+    context = {
+        'patients': patients,
+        'stats': stats,
+        'search_query': search,
+    }
+    return render(request, 'dashboard/doctor/patients.html', context)
+
+@login_required
+@doctor_required
+def doctor_prescriptions(request):
+    """Doctor: My prescriptions view"""
+    doctor = request.user.doctor_profile
+    prescriptions = Prescription.objects.filter(
+        doctor=doctor
+    ).select_related('patient__user', 'appointment')
+
+    # Filtering
+    search = request.GET.get('search', '')
+    patient_id = request.GET.get('patient', '')
+    active_only = request.GET.get('active', 'false') == 'true'
+
+    if search:
+        prescriptions = prescriptions.filter(
+            Q(medicine_name__icontains=search) |
+            Q(patient__user__first_name__icontains=search) |
+            Q(patient__user__last_name__icontains=search)
+        )
+
+    if patient_id:
+        prescriptions = prescriptions.filter(patient_id=patient_id)
+
+    if active_only:
+        prescriptions = prescriptions.filter(is_active=True)
+
+    patients = Patient.objects.filter(
+        appointment__doctor=doctor
+    ).distinct()
+
+    # Statistics
+    stats = {
+        'total': prescriptions.count(),
+        'active': prescriptions.filter(is_active=True).count(),
+        'refillable': prescriptions.filter(refill_count__lt=F('max_refills')).count(),
+    }
+
+    # Pagination
+    paginator = Paginator(prescriptions, 10)
+    page = request.GET.get('page')
+    try:
+        prescriptions = paginator.page(page)
+    except PageNotAnInteger:
+        prescriptions = paginator.page(1)
+    except EmptyPage:
+        prescriptions = paginator.page(paginator.num_pages)
+
+    context = {
+        'prescriptions': prescriptions,
+        'patients': patients,
+        'stats': stats,
+        'search_query': search,
+        'patient_filter': patient_id,
+        'active_only': active_only,
+    }
+    return render(request, 'dashboard/doctor/prescriptions.html', context)
+
+@login_required
+@doctor_required
+def create_prescription(request, appointment_id=None):
+    """Doctor: Create prescription view"""
+    doctor = request.user.doctor_profile
+
+    if appointment_id:
+        appointment = get_object_or_404(
+            Appointment,
+            id=appointment_id,
+            doctor=doctor
+        )
+        patient = appointment.patient
+    else:
+        appointment = None
+        patient = None
+
+    if request.method == 'POST':
+        form = PrescriptionForm(request.POST)
+        if form.is_valid():
+            prescription = form.save(commit=False)
+            prescription.doctor = doctor
+
+            if appointment:
+                prescription.appointment = appointment
+                prescription.patient = appointment.patient
+            else:
+                # Get patient from form or request
+                patient_id = request.POST.get('patient')
+                if patient_id:
+                    prescription.patient = get_object_or_404(Patient, id=patient_id)
+                else:
+                    messages.error(request, 'Please select a patient.')
+                    return redirect('create_prescription')
+
+            prescription.save()
+
+            # Create notification for patient
+            Notification.objects.create(
+                user=prescription.patient.user,
+                notification_type='prescription',
+                title='New Prescription',
+                message=f'Dr. {doctor.user.get_full_name()} has prescribed {prescription.medicine_name}',
+                related_object_id=prescription.id,
+                related_object_type='prescription'
+            )
+
+            messages.success(request, 'Prescription created successfully!')
+
+            if appointment:
+                return redirect('doctor_appointments')
+            else:
+                return redirect('doctor_prescriptions')
+    else:
+        form = PrescriptionForm()
+
+    # Get doctor's recent patients
+    recent_patients = Patient.objects.filter(
+        appointment__doctor=doctor
+    ).distinct().select_related('user')[:10]
+
+    context = {
+        'form': form,
+        'appointment': appointment,
+        'patient': patient,
+        'recent_patients': recent_patients,
+    }
+    return render(request, 'dashboard/doctor/create_prescription.html', context)
+
+@login_required
+@doctor_required
+def update_appointment_status(request, appointment_id):
+    """Doctor: Update appointment status"""
+    doctor = request.user.doctor_profile
+    appointment = get_object_or_404(Appointment, id=appointment_id, doctor=doctor)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        notes = request.POST.get('notes', '')
+
+        if new_status in dict(Appointment.STATUS_CHOICES):
+            appointment.status = new_status
+            appointment.notes = notes
+            appointment.save()
+
+            # Create notification
+            Notification.objects.create(
+                user=appointment.patient.user,
+                notification_type='appointment',
+                title=f'Appointment {new_status.title()}',
+                message=f'Your appointment with Dr. {doctor.user.get_full_name()} has been {new_status}',
+                related_object_id=appointment.id,
+                related_object_type='appointment'
+            )
+
+            messages.success(request, f'Appointment status updated to {new_status}.')
+
+    return redirect('doctor_appointments')
+
+@login_required
+@doctor_required
+def doctor_schedule(request):
+    """Doctor: Schedule view"""
+    doctor = request.user.doctor_profile
+
+    # Get date range (default: current week)
+    today = timezone.now().date()
+    start_date = request.GET.get('start_date', today - timedelta(days=today.weekday()))
+    end_date = request.GET.get('end_date', start_date + timedelta(days=6))
+
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+    if isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+    # Get appointments in date range
+    appointments = Appointment.objects.filter(
+        doctor=doctor,
+        date__range=[start_date, end_date]
+    ).select_related('patient__user').order_by('date', 'time')
+
+    # Group by date
+    schedule_by_date = {}
+    current_date = start_date
+    while current_date <= end_date:
+        schedule_by_date[current_date] = appointments.filter(date=current_date)
+        current_date += timedelta(days=1)
+
+    # Get available time slots
+    available_slots = doctor.generate_time_slots()
+
+    context = {
+        'doctor': doctor,
+        'start_date': start_date,
+        'end_date': end_date,
+        'schedule_by_date': schedule_by_date,
+        'available_slots': available_slots,
+        'today': today,
+    }
+    return render(request, 'dashboard/doctor/schedule.html', context)
+
+@login_required
+@doctor_required
+def doctor_profile(request):
+    """Doctor: Profile view"""
+    doctor = request.user.doctor_profile
+
+    if request.method == 'POST':
+        user_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
+        doctor_form = DoctorUpdateForm(request.POST, instance=doctor)
+
+        if user_form.is_valid() and doctor_form.is_valid():
+            user_form.save()
+            doctor_form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('doctor_profile')
+    else:
+        user_form = ProfileUpdateForm(instance=request.user)
+        doctor_form = DoctorUpdateForm(instance=doctor)
+
+    # Statistics for profile
+    stats = {
+        'total_appointments': Appointment.objects.filter(doctor=doctor).count(),
+        'total_patients': Patient.objects.filter(appointment__doctor=doctor).distinct().count(),
+        'average_rating': doctor.average_rating,
+        'completion_rate': Appointment.objects.filter(
+            doctor=doctor,
+            status='completed'
+        ).count() / max(Appointment.objects.filter(doctor=doctor).count(), 1) * 100,
+    }
+
+    context = {
+        'user_form': user_form,
+        'doctor_form': doctor_form,
+        'doctor': doctor,
+        'stats': stats,
+    }
+    return render(request, 'dashboard/doctor/profile.html', context)
+
+# ==================== Patient Views ====================
+
+@login_required
+@patient_required
+def patient_dashboard(request):
+    """Patient dashboard view"""
+    patient = request.user.patient_profile
+
+    # Update last visit
+    patient.last_visit = timezone.now()
+    patient.save()
+
+    # Statistics
+    total_appointments = patient.appointment_set.count()
+    upcoming_appointments = patient.appointment_set.filter(
+        date__gte=timezone.now().date(),
+        status__in=['pending', 'confirmed']
+    ).count()
+
+    prescriptions_count = patient.prescription_set.count()
+    active_prescriptions = patient.prescription_set.filter(is_active=True).count()
+
+    # Upcoming appointments
+    upcoming = patient.appointment_set.filter(
+        date__gte=timezone.now().date(),
+        status__in=['pending', 'confirmed']
+    ).select_related('doctor__user').order_by('date', 'time')[:5]
+
+    # Recent prescriptions
+    recent_prescriptions = patient.prescription_set.select_related(
+        'doctor__user'
+    ).order_by('-created_at')[:5]
+
+    # Medical records
+    recent_records = patient.medical_records.order_by('-created_at')[:5]
+
+    # Notifications
+    notifications = request.user.notifications.filter(is_read=False).order_by('-created_at')[:5]
+
+    context = {
+        'patient': patient,
+        'total_appointments': total_appointments,
+        'upcoming_appointments': upcoming_appointments,
+        'prescriptions_count': prescriptions_count,
+        'active_prescriptions': active_prescriptions,
+        'upcoming': upcoming,
+        'recent_prescriptions': recent_prescriptions,
+        'recent_records': recent_records,
+        'notifications': notifications,
+    }
+    return render(request, 'dashboard/patient/dashboard.html', context)
+
+@login_required
+@patient_required
+def patient_appointments(request):
+    """Patient: My appointments view"""
+    patient = request.user.patient_profile
+    appointments = patient.appointment_set.select_related(
+        'doctor__user', 'department'
+    ).order_by('-date', '-time')
+
+    # Filtering
+    status = request.GET.get('status', '')
+    date_filter = request.GET.get('date', '')
+    doctor_id = request.GET.get('doctor', '')
+
+    if status:
+        appointments = appointments.filter(status=status)
+
+    if date_filter:
+        appointments = appointments.filter(date=date_filter)
+
+    if doctor_id:
+        appointments = appointments.filter(doctor_id=doctor_id)
+
+    # Statistics
+    stats = {
+        'total': appointments.count(),
+        'upcoming': appointments.filter(
+            date__gte=timezone.now().date(),
+            status__in=['pending', 'confirmed']
+        ).count(),
+        'completed': appointments.filter(status='completed').count(),
+        'cancelled': appointments.filter(status='cancelled').count(),
+    }
+
+    # Get doctors the patient has visited
+    doctors = Doctor.objects.filter(
+        appointment__patient=patient
+    ).distinct().select_related('user')
+
+    # Pagination
+    paginator = Paginator(appointments, 10)
+    page = request.GET.get('page')
+    try:
+        appointments = paginator.page(page)
+    except PageNotAnInteger:
+        appointments = paginator.page(1)
+    except EmptyPage:
+        appointments = paginator.page(paginator.num_pages)
+
+    context = {
+        'appointments': appointments,
+        'stats': stats,
+        'doctors': doctors,
+        'status_filter': status,
+        'date_filter': date_filter,
+        'doctor_filter': doctor_id,
+    }
+    return render(request, 'dashboard/patient/appointments.html', context)
+
+@login_required
+@patient_required
+def book_appointment(request):
+    """Patient: Book appointment view"""
+    patient = request.user.patient_profile
+
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST)
+        if form.is_valid():
+            appointment = form.save(commit=False)
+            appointment.patient = patient
+            appointment.save()
+
+            messages.success(request, 'Appointment booked successfully!')
+            return redirect('patient_appointments')
+    else:
+        form = AppointmentForm()
+
+    # Get available doctors
+    doctors = Doctor.objects.filter(is_available=True, is_active=True).select_related(
+        'user', 'department'
+    )
+
+    # Get patient's recent doctors
+    recent_doctors = Doctor.objects.filter(
+        appointment__patient=patient
+    ).distinct().select_related('user')[:5]
+
+    context = {
+        'form': form,
+        'doctors': doctors,
+        'recent_doctors': recent_doctors,
+    }
+    return render(request, 'dashboard/patient/book_appointment.html', context)
+
+@login_required
+@patient_required
+def patient_prescriptions(request):
+    """Patient: My prescriptions view"""
+    patient = request.user.patient_profile
+    prescriptions = patient.prescription_set.select_related(
+        'doctor__user', 'appointment'
+    ).order_by('-created_at')
+
+    # Filtering
+    search = request.GET.get('search', '')
+    active_only = request.GET.get('active', 'false') == 'true'
+
+    if search:
+        prescriptions = prescriptions.filter(
+            Q(medicine_name__icontains=search) |
+            Q(doctor__user__first_name__icontains=search) |
+            Q(doctor__user__last_name__icontains=search)
+        )
+
+    if active_only:
+        prescriptions = prescriptions.filter(is_active=True)
+
+    # Statistics
+    stats = {
+        'total': prescriptions.count(),
+        'active': prescriptions.filter(is_active=True).count(),
+        'refillable': prescriptions.filter(refill_count__lt=F('max_refills')).count(),
+    }
+
+    # Pagination
+    paginator = Paginator(prescriptions, 10)
+    page = request.GET.get('page')
+    try:
+        prescriptions = paginator.page(page)
+    except PageNotAnInteger:
+        prescriptions = paginator.page(1)
+    except EmptyPage:
+        prescriptions = paginator.page(paginator.num_pages)
+
+    context = {
+        'prescriptions': prescriptions,
+        'stats': stats,
+        'search_query': search,
+        'active_only': active_only,
+    }
+    return render(request, 'dashboard/patient/prescriptions.html', context)
+
+@login_required
+@patient_required
+def patient_medical_records(request):
+    """Patient: Medical records view"""
+    patient = request.user.patient_profile
+    records = patient.medical_records.select_related('doctor__user').order_by('-created_at')
+
+    # Filtering
+    record_type = request.GET.get('type', '')
+    doctor_id = request.GET.get('doctor', '')
+
+    if record_type:
+        records = records.filter(record_type=record_type)
+
+    if doctor_id:
+        records = records.filter(doctor_id=doctor_id)
+
+    # Get record type choices
+    record_types = MedicalRecord.RECORD_TYPE_CHOICES
+
+    # Get doctors who created records
+    doctors = Doctor.objects.filter(
+        medicalrecord__patient=patient
+    ).distinct().select_related('user')
+
+    # Pagination
+    paginator = Paginator(records, 10)
+    page = request.GET.get('page')
+    try:
+        records = paginator.page(page)
+    except PageNotAnInteger:
+        records = paginator.page(1)
+    except EmptyPage:
+        records = paginator.page(paginator.num_pages)
+
+    context = {
+        'records': records,
+        'record_types': record_types,
+        'doctors': doctors,
+        'type_filter': record_type,
+        'doctor_filter': doctor_id,
+    }
+    return render(request, 'dashboard/patient/medical_records.html', context)
+
+@login_required
+@patient_required
+def patient_billing(request):
+    """Patient: Billing view"""
+    patient = request.user.patient_profile
+    bills = patient.billing_set.select_related('doctor__user', 'appointment').order_by('-created_at')
+
+    # Filtering
+    status = request.GET.get('status', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+
+    if status:
+        bills = bills.filter(payment_status=status)
+
+    if date_from:
+        bills = bills.filter(created_at__date__gte=date_from)
+
+    if date_to:
+        bills = bills.filter(created_at__date__lte=date_to)
+
+    # Statistics
+    stats = {
+        'total_bills': bills.count(),
+        'total_amount': bills.aggregate(total=Sum('total_amount'))['total'] or 0,
+        'paid_amount': bills.aggregate(paid=Sum('paid_amount'))['paid'] or 0,
+        'due_amount': bills.aggregate(due=Sum('due_amount'))['due'] or 0,
+        'pending': bills.filter(payment_status='pending').count(),
+        'partial': bills.filter(payment_status='partial').count(),
+        'paid': bills.filter(payment_status='paid').count(),
+    }
+
+    # Pagination
+    paginator = Paginator(bills, 10)
+    page = request.GET.get('page')
+    try:
+        bills = paginator.page(page)
+    except PageNotAnInteger:
+        bills = paginator.page(1)
+    except EmptyPage:
+        bills = paginator.page(paginator.num_pages)
+
+    context = {
+        'bills': bills,
+        'stats': stats,
+        'status_filter': status,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    return render(request, 'dashboard/patient/billing.html', context)
+
+@login_required
+@patient_required
+def patient_profile(request):
+    """Patient: Profile view"""
+    patient = request.user.patient_profile
+
+    if request.method == 'POST':
+        user_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
+        patient_form = PatientUpdateForm(request.POST, instance=patient)
+
+        if user_form.is_valid() and patient_form.is_valid():
+            user_form.save()
+            patient_form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('patient_profile')
+    else:
+        user_form = ProfileUpdateForm(instance=request.user)
+        patient_form = PatientUpdateForm(instance=patient)
+
+    # Health statistics
+    health_stats = {
+        'bmi': patient.bmi,
+        'appointments': patient.appointment_set.count(),
+        'prescriptions': patient.prescription_set.count(),
+        'medical_records': patient.medical_records.count(),
+    }
+
+    context = {
+        'user_form': user_form,
+        'patient_form': patient_form,
+        'patient': patient,
+        'health_stats': health_stats,
+    }
+    return render(request, 'dashboard/patient/profile.html', context)
+
+# ==================== Common Views ====================
+
+@login_required
+def update_profile(request):
+    """Update user profile (common)"""
+    user = request.user
+
+    if request.method == 'POST':
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.phone = request.POST.get('phone', user.phone)
+        user.address = request.POST.get('address', user.address)
+        user.save()
+
+        messages.success(request, 'Profile updated successfully!')
+
+    # Redirect back based on role
+    if user.role == 'patient':
+        return redirect('patient_profile')
+    elif user.role == 'doctor':
+        return redirect('doctor_profile')
+    else:
+        return redirect('dashboard')
+
+@login_required
+def notifications(request):
+    """User notifications view"""
+    notifications = request.user.notifications.order_by('-created_at')
+
+    # Mark as read if requested
+    if request.GET.get('mark_read') == 'all':
+        notifications.update(is_read=True)
+        messages.success(request, 'All notifications marked as read.')
+        return redirect('notifications')
+
+    # Pagination
+    paginator = Paginator(notifications, 20)
+    page = request.GET.get('page')
+    try:
+        notifications = paginator.page(page)
+    except PageNotAnInteger:
+        notifications = paginator.page(1)
+    except EmptyPage:
+        notifications = paginator.page(paginator.num_pages)
+
+    context = {
+        'notifications': notifications,
+    }
+    return render(request, 'common/notifications.html', context)
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Mark notification as read"""
+    notification = get_object_or_404(
+        Notification,
+        id=notification_id,
+        user=request.user
+    )
+    notification.is_read = True
+    notification.save()
+
+    return JsonResponse({'success': True})
+
+# ==================== AJAX Views ====================
+
+@login_required
+def get_available_slots(request):
+    """Get available time slots for a doctor on a specific date"""
+    doctor_id = request.GET.get('doctor_id')
+    date_str = request.GET.get('date')
+
+    if not doctor_id or not date_str:
+        return JsonResponse({'slots': []})
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        doctor = get_object_or_404(Doctor, id=doctor_id)
+
+        # Get booked slots for the day
+        booked_slots = Appointment.objects.filter(
+            doctor=doctor,
+            date=date_obj,
+            status__in=['pending', 'confirmed', 'in_progress']
+        ).values_list('time', flat=True)
+
+        # Generate all slots based on doctor's working hours
+        all_slots = doctor.generate_time_slots()
+
+        # Filter out booked slots
+        available_slots = [slot for slot in all_slots if slot not in booked_slots]
+
+        return JsonResponse({'slots': available_slots})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def check_appointment_availability(request):
+    """Check if a specific time slot is available"""
+    doctor_id = request.GET.get('doctor_id')
+    date_str = request.GET.get('date')
+    time_str = request.GET.get('time')
+
+    if not all([doctor_id, date_str, time_str]):
+        return JsonResponse({'available': False, 'error': 'Missing parameters'})
+
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        time_obj = datetime.strptime(time_str, '%H:%M').time()
+        doctor = get_object_or_404(Doctor, id=doctor_id)
+
+        # Check for conflicts
+        conflicting = Appointment.objects.filter(
+            doctor=doctor,
+            date=date_obj,
+            time=time_obj,
+            status__in=['pending', 'confirmed', 'in_progress']
+        ).exists()
+
+        # Check if within working hours
+        within_hours = doctor.working_hours_start <= time_obj <= doctor.working_hours_end
+
+        # Check if doctor has reached max patients
+        daily_count = Appointment.objects.filter(
+            doctor=doctor,
+            date=date_obj
+        ).count()
+        max_reached = daily_count >= doctor.max_patients_per_day
+
+        available = not conflicting and within_hours and not max_reached
+
+        return JsonResponse({
+            'available': available,
+            'conflicting': conflicting,
+            'within_hours': within_hours,
+            'max_reached': max_reached,
+            'daily_count': daily_count,
+            'max_patients': doctor.max_patients_per_day,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def get_patient_details(request, patient_id):
+    """Get patient details for doctor's view"""
+    patient = get_object_or_404(
+        Patient.objects.select_related('user'),
+        id=patient_id
+    )
+
+    # Check if doctor has access to this patient
+    if request.user.role == 'doctor':
+        has_access = Appointment.objects.filter(
+            doctor=request.user.doctor_profile,
+            patient=patient
+        ).exists()
+        if not has_access:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+
+    # Get patient data
+    data = {
+        'id': patient.id,
+        'name': patient.user.get_full_name(),
+        'age': patient.age,
+        'gender': patient.get_gender_display(),
+        'blood_group': patient.blood_group or 'Not specified',
+        'height': str(patient.height) if patient.height else 'Not specified',
+        'weight': str(patient.weight) if patient.weight else 'Not specified',
+        'bmi': patient.bmi,
+        'allergies': patient.allergies or 'None reported',
+        'medical_history': patient.medical_history or 'None reported',
+        'current_medications': patient.current_medications or 'None',
+        'emergency_contact': patient.emergency_contact or 'Not specified',
+        'email': patient.user.email,
+        'phone': patient.user.phone,
+    }
+
+    return JsonResponse(data)
+
+@login_required
+def search_doctors(request):
+    """Search doctors by name or specialization"""
+    query = request.GET.get('q', '')
+
+    if not query:
+        return JsonResponse({'doctors': []})
+
+    doctors = Doctor.objects.filter(
+        Q(user__first_name__icontains=query) |
+        Q(user__last_name__icontains=query) |
+        Q(specialization__icontains=query) |
+        Q(qualification__icontains=query),
+        is_active=True,
+        is_available=True
+    ).select_related('user', 'department')[:10]
+
+    results = []
+    for doctor in doctors:
+        results.append({
+            'id': doctor.id,
+            'name': f"Dr. {doctor.user.get_full_name()}",
+            'specialization': doctor.specialization or doctor.qualification,
+            'department': doctor.department.name if doctor.department else 'General',
+            'fee': str(doctor.consultation_fee),
+            'rating': doctor.average_rating,
+        })
+
+    return JsonResponse({'doctors': results})
+
+@login_required
+def search_patients(request):
+    """Search patients by name (for doctors and admin)"""
+    query = request.GET.get('q', '')
+
+    if not query:
+        return JsonResponse({'patients': []})
+
+    # Permission check
+    if request.user.role == 'doctor':
+        # Doctors can only see their patients
+        doctor = request.user.doctor_profile
+        patients = Patient.objects.filter(
+            appointment__doctor=doctor,
+            user__first_name__icontains=query
+        ).distinct().select_related('user')[:10]
+    elif request.user.role == 'admin':
+        # Admin can see all patients
+        patients = Patient.objects.filter(
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(user__email__icontains=query),
+            is_active=True
+        ).select_related('user')[:10]
+    else:
+        return JsonResponse({'patients': []})
+
+    results = []
+    for patient in patients:
+        results.append({
+            'id': patient.id,
+            'name': patient.user.get_full_name(),
+            'age': patient.age,
+            'gender': patient.get_gender_display(),
+            'email': patient.user.email,
+            'phone': patient.user.phone,
+        })
+
+    return JsonResponse({'patients': results})
+
+# ==================== PDF Generation Views ====================
+
+@login_required
+def generate_prescription_pdf(request, prescription_id):
+    """Generate PDF for prescription"""
+    prescription = get_object_or_404(
+        Prescription.objects.select_related('patient__user', 'doctor__user'),
+        id=prescription_id
+    )
+
+    # Permission check
+    if request.user.role == 'patient' and prescription.patient.user != request.user:
+        raise PermissionDenied
+    elif request.user.role == 'doctor' and prescription.doctor.user != request.user:
+        raise PermissionDenied
+
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    # Content
+    content = []
+
+    # Header
+    header_style = styles['Heading1']
+    header_style.alignment = 1  # Center
+    content.append(Paragraph("MEDICARE HOSPITAL", header_style))
+    content.append(Paragraph("123 Healthcare Street, Medical District", styles['Normal']))
+    content.append(Paragraph("Phone: +1 (555) 123-4567 | Email: info@medicare.com", styles['Normal']))
+    content.append(Spacer(1, 20))
+
+    # Title
+    title_style = styles['Heading2']
+    title_style.alignment = 1
+    content.append(Paragraph("MEDICAL PRESCRIPTION", title_style))
+    content.append(Spacer(1, 20))
+
+    # Patient Info
+    content.append(Paragraph("<b>Patient Information:</b>", styles['Normal']))
+    patient_info = [
+        f"Name: {prescription.patient.user.get_full_name()}",
+        f"Age: {prescription.patient.age} years",
+        f"Gender: {prescription.patient.get_gender_display()}",
+        f"Date: {prescription.created_at.strftime('%B %d, %Y')}"
+    ]
+    for info in patient_info:
+        content.append(Paragraph(info, styles['Normal']))
+
+    content.append(Spacer(1, 20))
+
+    # Doctor Info
+    content.append(Paragraph("<b>Prescribing Doctor:</b>", styles['Normal']))
+    doctor_info = [
+        f"Name: Dr. {prescription.doctor.user.get_full_name()}",
+        f"Qualification: {prescription.doctor.qualification}",
+        f"Department: {prescription.doctor.department.name if prescription.doctor.department else 'General'}"
+    ]
+    for info in doctor_info:
+        content.append(Paragraph(info, styles['Normal']))
+
+    content.append(Spacer(1, 20))
+
+    # Prescription Details
+    content.append(Paragraph("<b>Prescription Details:</b>", styles['Heading3']))
+
+    prescription_data = [
+        ['Medicine', 'Dosage', 'Frequency', 'Duration', 'Quantity'],
+        [
+            prescription.medicine_name,
+            prescription.dosage,
+            prescription.frequency,
+            prescription.duration,
+            prescription.quantity
+        ]
+    ]
+
+    table = Table(prescription_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    content.append(table)
+
+    content.append(Spacer(1, 20))
+
+    # Instructions and Advice
+    if prescription.instructions:
+        content.append(Paragraph("<b>Instructions:</b>", styles['Normal']))
+        content.append(Paragraph(prescription.instructions, styles['Normal']))
+        content.append(Spacer(1, 10))
+
+    content.append(Paragraph("<b>Doctor's Advice:</b>", styles['Normal']))
+    content.append(Paragraph(prescription.advice, styles['Normal']))
+
+    content.append(Spacer(1, 30))
+
+    # Signature
+    signature = f"Signature: _________________________<br/>Dr. {prescription.doctor.user.get_full_name()}<br/>{prescription.doctor.qualification}"
+    content.append(Paragraph(signature, styles['Normal']))
+
+    # Build PDF
+    doc.build(content)
+
+    # Get PDF value
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    # Create HTTP response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="prescription_{prescription.id}.pdf"'
+    response.write(pdf)
+
+    return response
+
+@login_required
+def generate_bill_pdf(request, bill_id):
+    """Generate PDF for bill"""
+    bill = get_object_or_404(
+        Billing.objects.select_related('patient__user', 'doctor__user', 'appointment'),
+        id=bill_id
+    )
+
+    # Permission check
+    if request.user.role == 'patient' and bill.patient.user != request.user:
+        raise PermissionDenied
+
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    # Content
+    content = []
+
+    # Header
+    header_style = styles['Heading1']
+    header_style.alignment = 1
+    content.append(Paragraph("MEDICARE HOSPITAL", header_style))
+    content.append(Paragraph("INVOICE", styles['Heading2']))
+    content.append(Spacer(1, 20))
+
+    # Bill Info
+    bill_info_data = [
+        ['Bill Number:', bill.bill_number],
+        ['Date:', bill.created_at.strftime('%B %d, %Y')],
+        ['Due Date:', bill.due_date.strftime('%B %d, %Y')],
+        ['Payment Status:', bill.get_payment_status_display()],
+    ]
+
+    bill_info_table = Table(bill_info_data, colWidths=[150, 200])
+    bill_info_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+    ]))
+    content.append(bill_info_table)
+
+    content.append(Spacer(1, 20))
+
+    # Patient Info
+    content.append(Paragraph("<b>Billed To:</b>", styles['Normal']))
+    patient_info = [
+        f"Name: {bill.patient.user.get_full_name()}",
+        f"Email: {bill.patient.user.email}",
+        f"Phone: {bill.patient.user.phone}"
+    ]
+    for info in patient_info:
+        content.append(Paragraph(info, styles['Normal']))
+
+    content.append(Spacer(1, 20))
+
+    # Bill Details
+    content.append(Paragraph("<b>Bill Details:</b>", styles['Heading3']))
+
+    if bill.appointment:
+        content.append(Paragraph(f"Appointment: {bill.appointment.date} at {bill.appointment.time}", styles['Normal']))
+        content.append(Paragraph(f"Doctor: Dr. {bill.appointment.doctor.user.get_full_name()}", styles['Normal']))
+
+    content.append(Spacer(1, 10))
+
+    # Charges Table
+    charges_data = [
+        ['Description', 'Amount ($)'],
+        ['Consultation Fee', f"{bill.consultation_fee:.2f}"],
+        ['Medicine Charges', f"{bill.medicine_charges:.2f}"],
+        ['Test Charges', f"{bill.test_charges:.2f}"],
+        ['Other Charges', f"{bill.other_charges:.2f}"],
+        ['Subtotal', f"{bill.consultation_fee + bill.medicine_charges + bill.test_charges + bill.other_charges:.2f}"],
+        ['Tax', f"{bill.tax_amount:.2f}"],
+        ['Discount', f"-{bill.discount:.2f}"],
+        ['Insurance Coverage', f"-{bill.insurance_coverage:.2f}"],
+        ['Total Amount', f"<b>{bill.total_amount:.2f}</b>"],
+        ['Paid Amount', f"{bill.paid_amount:.2f}"],
+        ['Due Amount', f"<b>{bill.due_amount:.2f}</b>"],
+    ]
+
+    charges_table = Table(charges_data, colWidths=[300, 100])
+    charges_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -3), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -4), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    content.append(charges_table)
+
+    content.append(Spacer(1, 30))
+
+    # Payment Info
+    if bill.payment_method:
+        content.append(Paragraph(f"Payment Method: {bill.get_payment_method_display()}", styles['Normal']))
+
+    if bill.notes:
+        content.append(Paragraph("<b>Notes:</b>", styles['Normal']))
+        content.append(Paragraph(bill.notes, styles['Normal']))
+
+    content.append(Spacer(1, 20))
+
+    # Footer
+    footer = "Thank you for choosing MediCare Hospital.<br/>Please contact billing department for any queries."
+    content.append(Paragraph(footer, styles['Normal']))
+
+    # Build PDF
+    doc.build(content)
+
+    # Get PDF value
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    # Create HTTP response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="bill_{bill.bill_number}.pdf"'
+    response.write(pdf)
+
+    return response
+
+# ==================== Utility Functions ====================
+
+def get_monthly_statistics():
+    """Get monthly statistics for dashboard"""
+    today = timezone.now()
+    start_of_month = today.replace(day=1)
+
+    # Monthly appointments
+    monthly_appointments = Appointment.objects.filter(
+        date__gte=start_of_month
+    ).count()
+
+    # Monthly revenue
+    monthly_revenue = Billing.objects.filter(
+        created_at__gte=start_of_month
+    ).aggregate(
+        total=Sum('total_amount'),
+        paid=Sum('paid_amount')
+    )
+
+    # Monthly new patients
+    monthly_patients = Patient.objects.filter(
+        registration_date__gte=start_of_month
+    ).count()
+
+    return {
+        'appointments': monthly_appointments,
+        'revenue_total': monthly_revenue['total'] or 0,
+        'revenue_paid': monthly_revenue['paid'] or 0,
+        'new_patients': monthly_patients,
+    }
+
+def send_appointment_reminders():
+    """Send appointment reminders (to be called by cron job)"""
+    tomorrow = timezone.now().date() + timedelta(days=1)
+    appointments = Appointment.objects.filter(
+        date=tomorrow,
+        reminder_sent=False,
+        status__in=['pending', 'confirmed']
+    ).select_related('patient__user', 'doctor__user')
+
+    for appointment in appointments:
+        # Create notification
+        Notification.objects.create(
+            user=appointment.patient.user,
+            notification_type='reminder',
+            title='Appointment Reminder',
+            message=f'Reminder: Your appointment with Dr. {appointment.doctor.user.get_full_name()} is tomorrow at {appointment.time}',
+            related_object_id=appointment.id,
+            related_object_type='appointment'
+        )
+
+        # Mark as sent
+        appointment.reminder_sent = True
+        appointment.save()
+
+    return len(appointments)
+
+# ==================== Error Handlers ====================
+
+def handler404(request, exception):
+    """Custom 404 error handler"""
+    return render(request, 'errors/404.html', status=404)
+
+def handler500(request):
+    """Custom 500 error handler"""
+    return render(request, 'errors/500.html', status=500)
+
+def handler403(request, exception):
+    """Custom 403 error handler"""
+    return render(request, 'errors/403.html', status=403)
+
+def handler400(request, exception):
+    """Custom 400 error handler"""
+    return render(request, 'errors/400.html', status=400)
+
+
+/* Dashboard Layout */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background-color: var(--bg-dark);
+    color: white;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    transition: var(--transition);
+    z-index: 100;
+}
+
+.sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: white;
+    text-decoration: none;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.sidebar-menu {
+    padding: 1rem 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: var(--transition);
+    gap: 0.75rem;
+}
+
+.menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.menu-item.active {
+    background-color: rgba(37, 99, 235, 0.2);
+    color: white;
+    border-left: 4px solid var(--primary-color);
+}
+
+.menu-icon {
+    width: 20px;
+    text-align: center;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+    flex: 1;
+    margin-left: 250px;
+    padding: 2rem;
+    background-color: var(--bg-light);
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.welcome-text {
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background-color: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+}
+
+.bg-primary {
+    background-color: var(--primary-color);
+}
+
+.bg-success {
+    background-color: var(--success-color);
+}
+
+.bg-warning {
+    background-color: var(--warning-color);
+}
+
+.bg-danger {
+    background-color: var(--danger-color);
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+}
+
+.stat-content p {
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+
+/* Dashboard Layout */
+.dashboard-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-col {
+    min-width: 0;
+}
+
+/* Table Responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* User Info in Tables */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.125rem;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background-color: var(--bg-white);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.action-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.action-btn i {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.action-btn span {
+    font-weight: 500;
+}
+
+/* Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.form-grid .form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Filter Form */
+.filter-form {
+    background-color: var(--bg-white);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+/* Text Utilities */
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: var(--text-light);
+}
+
+.text-primary {
+    color: var(--primary-color);
+}
+
+/* Margin Utilities */
+.mb-4 {
+    margin-bottom: 1.5rem;
+}
+
+.mt-4 {
+    margin-top: 1.5rem;
+}
+
+/* Responsive Dashboard */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 70px;
+    }
+
+    .sidebar .menu-text,
+    .sidebar .sidebar-brand span {
+        display: none;
+    }
+
+    .dashboard-content {
+        margin-left: 70px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-content {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+
+
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary-color: #10b981;
+    --accent-color: #8b5cf6;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --success-color: #10b981;
+
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --text-light: #9ca3af;
+
+    --bg-light: #f9fafb;
+    --bg-white: #ffffff;
+    --bg-gray: #f3f4f6;
+    --bg-dark: #111827;
+
+    --border-color: #e5e7eb;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-primary);
+    background-color: var(--bg-light);
+    line-height: 1.6;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+h1 {
+    font-size: 2.5rem;
+}
+
+h2 {
+    font-size: 2rem;
+}
+
+h3 {
+    font-size: 1.5rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+}
+
+p {
+    margin-bottom: 1rem;
+}
+
+/* Layout */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.btn-icon:hover {
+    background-color: var(--bg-gray);
+    color: var(--primary-color);
+}
+
+.btn-danger {
+    color: var(--danger-color);
+}
+
+/* Cards */
+.card {
+    background-color: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-white);
+    transition: var(--transition);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-white);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* Tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table thead {
+    background-color: var(--bg-gray);
+}
+
+.data-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--bg-gray);
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-approved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-completed {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.status-cancelled {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.status-available {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-unavailable {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    padding: 6rem 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: url('/static/images/hero-pattern.svg') no-repeat center;
+    opacity: 0.1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Features Section */
+.features-section {
+    padding: 5rem 0;
+    background-color: var(--bg-white);
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 3rem;
+    font-size: 2.5rem;
+    color: var(--text-primary);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.feature-card {
+    text-align: center;
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    background-color: var(--bg-light);
+    transition: var(--transition);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+}
+
+/* Doctors Section */
+.doctors-section {
+    padding: 5rem 0;
+    background-color: var(--bg-light);
+}
+
+.doctors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.doctor-card {
+    background-color: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+
+.doctor-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.doctor-image {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+    font-weight: bold;
+}
+
+.doctor-specialty {
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.doctor-qualification {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.doctor-info {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+
+/* CTA Section */
+.cta-section {
+    padding: 5rem 0;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    text-align: center;
+}
+
+.cta-content h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.cta-content p {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+
+/* Navigation */
+.navbar {
+    background-color: var(--bg-white);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.navbar-menu {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: var(--transition);
+    padding: 0.5rem 0;
+    position: relative;
+}
+
+.nav-link:hover {
+    color: var(--primary-color);
+}
+
+.nav-link.active {
+    color: var(--primary-color);
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--primary-color);
+}
+
+/* Messages */
+.messages-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1001;
+    max-width: 400px;
+}
+
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideIn 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.alert-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    transition: var(--transition);
+}
+
+.close-btn:hover {
+    opacity: 1;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Pagination */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.page-link:hover {
+    background-color: var(--bg-gray);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.page-link.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.pagination-info {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1002;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: var(--bg-white);
+    margin: 5% auto;
+    width: 90%;
+    max-width: 600px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .section-title {
+        font-size: 2rem;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .doctors-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .navbar-menu {
+        display: none;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 1rem;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.75rem;
+    }
+
+    h3 {
+        font-size: 1.25rem;
+    }
+}
+
+
+
+
+// Chart.js configurations for dashboard charts
+
+class DashboardCharts {
+    constructor() {
+        this.colors = {
+            primary: '#2563eb',
+            secondary: '#10b981',
+            accent: '#8b5cf6',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+            info: '#06b6d4',
+            light: '#94a3b8',
+            dark: '#1e293b'
+        };
+
+        this.init();
+    }
+
+    init() {
+        this.initRevenueChart();
+        this.initAppointmentsChart();
+        this.initPatientsChart();
+        this.initDepartmentChart();
+    }
+
+    // Revenue Chart
+    initRevenueChart() {
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [65000, 72000, 80000, 85000, 90000, 95000, 100000],
+                    borderColor: this.colors.primary,
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => `$${context.parsed.y.toLocaleString()}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            drawBorder: false
+                        },
+                        ticks: {
+                            callback: (value) => `$${value / 1000}k`
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Appointments Chart
+    initAppointmentsChart() {
+        const ctx = document.getElementById('appointmentsChart');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Appointments',
+                    data: [45, 52, 48, 60, 55, 35, 25],
+                    backgroundColor: [
+                        this.colors.primary,
+                        this.colors.secondary,
+                        this.colors.accent,
+                        this.colors.warning,
+                        this.colors.info,
+                        this.colors.light,
+                        this.colors.dark
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Patients Chart
+    initPatientsChart() {
+        const ctx = document.getElementById('patientsChart');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['New', 'Returning', 'Follow-up', 'Emergency'],
+                datasets: [{
+                    data: [35, 25, 20, 20],
+                    backgroundColor: [
+                        this.colors.primary,
+                        this.colors.secondary,
+                        this.colors.accent,
+                        this.colors.warning
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Department Chart
+    initDepartmentChart() {
+        const ctx = document.getElementById('departmentChart');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'polarArea',
+            data: {
+                labels: ['Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'Dermatology'],
+                datasets: [{
+                    data: [35, 25, 20, 15, 5],
+                    backgroundColor: [
+                        'rgba(37, 99, 235, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(139, 92, 246, 0.7)',
+                        'rgba(245, 158, 11, 0.7)',
+                        'rgba(239, 68, 68, 0.7)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                },
+                scales: {
+                    r: {
+                        grid: {
+                            circular: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Prescription Statistics
+    static initPrescriptionStats() {
+        const ctx = document.getElementById('prescriptionStats');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Antibiotics', 'Pain Relief', 'Chronic', 'Vitamins', 'Specialty', 'Other'],
+                datasets: [{
+                    label: 'Prescriptions',
+                    data: [65, 75, 70, 80, 60, 50],
+                    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                    borderColor: '#2563eb',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#2563eb'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
+    // Doctor Performance
+    static initDoctorPerformance(doctorData) {
+        const ctx = document.getElementById('doctorPerformance');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: doctorData.map(d => d.name),
+                datasets: [{
+                    label: 'Patients Treated',
+                    data: doctorData.map(d => d.patients),
+                    backgroundColor: '#2563eb'
+                }, {
+                    label: 'Appointments',
+                    data: doctorData.map(d => d.appointments),
+                    backgroundColor: '#10b981'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // Monthly Growth
+    static initMonthlyGrowth() {
+        const ctx = document.getElementById('monthlyGrowth');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                datasets: [{
+                    label: 'Patients',
+                    data: [120, 150, 180, 210],
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: 'Revenue',
+                    data: [85000, 95000, 110000, 125000],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Patients'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Initialize charts when DOM is loaded
+document.addEventListener('DOMContentLoaded', function () {
+    new DashboardCharts();
+
+    // Initialize any other charts based on page
+    if (document.getElementById('prescriptionStats')) {
+        DashboardCharts.initPrescriptionStats();
+    }
+
+    if (document.getElementById('doctorPerformance')) {
+        // Sample data - in real app, fetch from server
+        const doctorData = [
+            { name: 'Dr. Smith', patients: 45, appointments: 60 },
+            { name: 'Dr. Johnson', patients: 38, appointments: 52 },
+            { name: 'Dr. Williams', patients: 42, appointments: 58 },
+            { name: 'Dr. Brown', patients: 35, appointments: 48 }
+        ];
+        DashboardCharts.initDoctorPerformance(doctorData);
+    }
+
+    if (document.getElementById('monthlyGrowth')) {
+        DashboardCharts.initMonthlyGrowth();
+    }
+});
+
+// Export for use in other modules
+window.DashboardCharts = DashboardCharts;
+
+// Main JavaScript file
+
+// DOM Ready
+document.addEventListener('DOMContentLoaded', function () {
+    // Initialize tooltips
+    initTooltips();
+
+    // Initialize date pickers
+    initDatePickers();
+
+    // Initialize time pickers
+    initTimePickers();
+
+    // Handle form submissions with loading states
+    initFormLoaders();
+
+    // Handle responsive sidebar
+    initResponsiveSidebar();
+});
+
+// Tooltips
+function initTooltips() {
+    const tooltips = document.querySelectorAll('[title]');
+    tooltips.forEach(element => {
+        element.addEventListener('mouseenter', showTooltip);
+        element.addEventListener('mouseleave', hideTooltip);
+    });
+}
+
+function showTooltip(event) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = this.title;
+    document.body.appendChild(tooltip);
+
+    const rect = this.getBoundingClientRect();
+    tooltip.style.top = rect.top - tooltip.offsetHeight - 10 + 'px';
+    tooltip.style.left = rect.left + (rect.width - tooltip.offsetWidth) / 2 + 'px';
+
+    this._tooltip = tooltip;
+}
+
+function hideTooltip() {
+    if (this._tooltip) {
+        this._tooltip.remove();
+        this._tooltip = null;
+    }
+}
+
+// Date Pickers
+function initDatePickers() {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        // Set min date to today for future dates
+        if (!input.hasAttribute('min') && input.name.includes('date')) {
+            const today = new Date().toISOString().split('T')[0];
+            input.min = today;
+        }
+    });
+}
+
+// Time Pickers
+function initTimePickers() {
+    const timeInputs = document.querySelectorAll('input[type="time"]');
+    timeInputs.forEach(input => {
+        // Set business hours (9 AM to 5 PM)
+        input.min = '09:00';
+        input.max = '17:00';
+    });
+}
+
+// Form Loaders
+function initFormLoaders() {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function (e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                submitBtn.disabled = true;
+            }
+        });
+    });
+}
+
+// Responsive Sidebar
+function initResponsiveSidebar() {
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', function () {
+            sidebar.classList.toggle('collapsed');
+        });
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function (event) {
+        if (window.innerWidth <= 768 && sidebar && !sidebar.contains(event.target)) {
+            sidebar.classList.remove('collapsed');
+        }
+    });
+}
+
+// AJAX Functions
+async function fetchAvailableSlots(doctorId, date) {
+    try {
+        const response = await fetch(`/ajax/get-slots/?doctor_id=${doctorId}&date=${date}`);
+        const data = await response.json();
+        return data.slots;
+    } catch (error) {
+        console.error('Error fetching slots:', error);
+        return [];
+    }
+}
+
+// Real-time validation
+function initLiveValidation() {
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('blur', function () {
+            validateField(this);
+        });
+    });
+}
+
+function validateField(field) {
+    const value = field.value.trim();
+    const errorElement = field.nextElementSibling;
+
+    // Remove existing error
+    if (errorElement && errorElement.classList.contains('error-message')) {
+        errorElement.remove();
+    }
+
+    // Check required fields
+    if (field.hasAttribute('required') && !value) {
+        showError(field, 'This field is required');
+        return false;
+    }
+
+    // Email validation
+    if (field.type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+            showError(field, 'Please enter a valid email address');
+            return false;
+        }
+    }
+
+    // Phone validation
+    if (field.name === 'phone' && value) {
+        const phoneRegex = /^[\d\s\-\+\(\)]{10,}$/;
+        if (!phoneRegex.test(value)) {
+            showError(field, 'Please enter a valid phone number');
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function showError(field, message) {
+    const error = document.createElement('div');
+    error.className = 'error-message';
+    error.style.color = '#ef4444';
+    error.style.fontSize = '0.875rem';
+    error.style.marginTop = '0.25rem';
+    error.textContent = message;
+
+    field.parentNode.appendChild(error);
+    field.style.borderColor = '#ef4444';
+}
+
+// Modal Functions
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function (event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function (e) {
+    // Close modal on ESC
+    if (e.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        });
+    }
+
+    // Search focus on Ctrl+K
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[type="search"]');
+        if (searchInput) {
+            searchInput.focus();
+        }
+    }
+});
+
+
+
+
+I have some template file already and some js(main.js,chart.js)
+give me template file I mention below with good design
+all file has their own css code
+HTML, CSS(no framework), Java Script(No framework)
+
+
+
+
+static/
+│   ├── css/
+│   │   └── responsive.css
+│   ├── js/
+│   │   ├── calendar.js
+│   │   └── forms.js
+├── templates/
+│   ├── partials/
+│   │   └── messages.html
+│   ├── public/
+│   │   ├── departments.html
+│   │   ├── doctors.html
+│   │   └── doctor_detail.html
+│   ├── auth/
+│   │   ├── login.html
+│   │   ├── register.html
+│   │   ├── password_reset.html
+│   │   ├── password_reset_done.html
+│   │   ├── password_reset_confirm.html
+│   │   └── password_reset_complete.html
+│   ├── dashboard/
+│   │   ├── admin/
+│   │   │   ├── dashboard.html
+│   │   │   ├── doctors.html
+│   │   │   ├── patients.html
+│   │   │   ├── appointments.html
+│   │   │   ├── billing.html
+│   │   │   ├── reports.html
+│   │   │   └── settings.html
+│   │   ├── doctor/
+│   │   │   ├── dashboard.html
+│   │   │   ├── appointments.html
+│   │   │   ├── patients.html
+│   │   │   ├── prescriptions.html
+│   │   │   ├── create_prescription.html
+│   │   │   ├── schedule.html
+│   │   │   └── profile.html
+│   │   └── patient/
+│   │       ├── dashboard.html
+│   │       ├── appointments.html
+│   │       ├── book_appointment.html
+│   │       ├── prescriptions.html
+│   │       ├── medical_records.html
+│   │       ├── billing.html
+│   │       └── profile.html
+│   ├── common/
+│   │   ├── notifications.html
+│   │   ├── profile.html
+│   │   └── settings.html
+│   └── errors/
+│       ├── 400.html
+│       ├── 403.html
+│       ├── 404.html
+│       └── 500.html

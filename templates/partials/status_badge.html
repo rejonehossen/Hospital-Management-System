@@ -1,0 +1,26 @@
+{# Usage: {% include 'partials/status_badge.html' with status=appointment.status %} #}
+{% if status == 'pending' %}
+<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+{% elif status == 'confirmed' %}
+<span class="badge bg-info text-dark"><i class="bi bi-check2-circle me-1"></i>Confirmed</span>
+{% elif status == 'in_progress' %}
+<span class="badge bg-primary"><i class="bi bi-activity me-1"></i>In Progress</span>
+{% elif status == 'completed' %}
+<span class="badge bg-success"><i class="bi bi-check2-all me-1"></i>Completed</span>
+{% elif status == 'cancelled' %}
+<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Cancelled</span>
+{% elif status == 'no_show' %}
+<span class="badge bg-secondary"><i class="bi bi-slash-circle me-1"></i>No Show</span>
+{% elif status == 'paid' %}
+<span class="badge bg-success"><i class="bi bi-check2-all me-1"></i>Paid</span>
+{% elif status == 'partial' %}
+<span class="badge bg-warning text-dark"><i class="bi bi-circle-half me-1"></i>Partial</span>
+{% elif status == 'overdue' %}
+<span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Overdue</span>
+{% elif status == 'active' %}
+<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
+{% elif status == 'inactive' %}
+<span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>Inactive</span>
+{% else %}
+<span class="badge bg-secondary">{{ status|title }}</span>
+{% endif %}

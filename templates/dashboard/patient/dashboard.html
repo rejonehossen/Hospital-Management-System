@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}Patient Dashboard — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Hello, <span class="cine-grad-text">{{ patient.user.first_name }}</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">
+                    Blood: {{ patient.blood_group|default:"—" }} &middot; Age: {{ patient.age }} &middot; BMI: {{ patient.bmi|default:"—" }}
+                </p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="calendar2-check-fill" label="Appointments" value=total_appointments %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="calendar-day-fill" label="Upcoming" value=upcoming_appointments %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="file-medical-fill" label="Prescriptions" value=prescriptions_count %}
+                </div>
+                <div class="col-6 col-xl-3">
+                    {% include 'partials/stat_card.html' with icon="activity" label="Active Meds" value=active_prescriptions %}
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <div class="d-flex justify-content-between mb-3">
+                            <h6 class="text-uppercase small mb-0" style="color:#8aa1bd;letter-spacing:.08em;">Upcoming
+                                Appointments</h6>
+                            <a href="{% url 'book_appointment' %}" class="btn btn-sm btn-info text-dark">
+                                <i class="bi bi-plus"></i> Book
+                            </a>
+                        </div>
+                        {% for appt in upcoming %}
+                        <div
+                            class="d-flex align-items-center gap-3 py-2 border-bottom border-secondary border-opacity-25">
+                            <i class="bi bi-calendar-event fs-4" style="color:#22d3ee;"></i>
+                            <div class="flex-grow-1">
+                                <div class="text-white small fw-semibold">Dr. {{ appt.doctor.user.get_full_name }}</div>
+                                <div class="small" style="color:#8aa1bd;">{{ appt.date|date:"M d, Y" }} &middot; {{
+                                    appt.time|time:"H:i" }}</div>
+                            </div>
+                            {% include 'partials/status_badge.html' with status=appt.status %}
+                        </div>
+                        {% empty %}
+                        <p class="text-center py-3 mb-0 small" style="color:#8aa1bd;">No upcoming appointments.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="cine-glass p-4 h-100 cine-reveal">
+                        <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Recent
+                            Prescriptions</h6>
+                        {% for rx in recent_prescriptions %}
+                        <div
+                            class="d-flex align-items-center gap-3 py-2 border-bottom border-secondary border-opacity-25">
+                            <i class="bi bi-capsule fs-5" style="color:#8b5cf6;"></i>
+                            <div class="flex-grow-1">
+                                <div class="text-white small fw-semibold">{{ rx.medicine_name }}</div>
+                                <div class="small" style="color:#8aa1bd;">{{ rx.dosage }} &middot; {{ rx.duration }}
+                                </div>
+                            </div>
+                            {% include 'partials/status_badge.html' with status=rx.is_active|yesno:"active,inactive" %}
+                        </div>
+                        {% empty %}
+                        <p class="text-center py-3 mb-0 small" style="color:#8aa1bd;">No prescriptions yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

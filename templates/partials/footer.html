@@ -1,0 +1,35 @@
+<footer class="mt-5 pt-5 pb-4 border-top border-info border-opacity-10">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-heart-pulse-fill cine-glow" style="color:#22d3ee;font-size:1.5rem;"></i>
+                    <span class="fw-bold cine-grad-text fs-5">{{ hospital_name }}</span>
+                </div>
+                <p class="small" style="color:#8aa1bd;">{{ hospital_address }}</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-white fw-semibold mb-3">Quick Links</h6>
+                <ul class="list-unstyled small">
+                    <li><a href="{% url 'departments' %}" class="text-decoration-none"
+                            style="color:#8aa1bd;">Departments</a></li>
+                    <li><a href="{% url 'doctor_list' %}" class="text-decoration-none" style="color:#8aa1bd;">Find a
+                            Doctor</a></li>
+                    <li><a href="{% url 'about' %}" class="text-decoration-none" style="color:#8aa1bd;">About</a></li>
+                    <li><a href="{% url 'contact' %}" class="text-decoration-none" style="color:#8aa1bd;">Contact</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-white fw-semibold mb-3">Contact</h6>
+                <p class="small mb-1" style="color:#8aa1bd;"><i class="bi bi-telephone me-2"></i>{{ hospital_phone }}
+                </p>
+                <p class="small mb-1" style="color:#8aa1bd;"><i class="bi bi-envelope me-2"></i>{{ hospital_email }}</p>
+            </div>
+        </div>
+        <hr class="border-secondary opacity-25 my-4">
+        <div class="text-center small" style="color:#5b7596;">
+            © {% now "Y" %} {{ hospital_name }}. All rights reserved.
+        </div>
+    </div>
+</footer>

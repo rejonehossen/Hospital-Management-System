@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}Billing — MediCare Admin{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Billing & <span class="cine-grad-text">Payments</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">Track revenue, payments, and outstanding balances.</p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="cash-stack" label="Total Revenue" value=stats.total_revenue prefix="$" decimals=2 %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="check2-circle" label="Total Paid" value=stats.total_paid prefix="$" decimals=2 %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="exclamation-circle" label="Outstanding" value=stats.total_due prefix="$" decimals=2 %}
+                </div>
+                <div class="col-md-3">
+                    {% include 'partials/stat_card.html' with icon="receipt" label="Total Bills" value=stats.pending|add:stats.partial|add:stats.paid %}
+                </div>
+            </div>
+
+            <div class="cine-glass p-3 mb-4 cine-reveal">
+                <form method="get" class="row g-2 align-items-end cine-form">
+                    <div class="col-md-2">
+                        <label class="form-label small">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending
+                            </option>
+                            <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial
+                            </option>
+                            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+                            <option value="overdue" {% if status_filter == 'overdue' %}selected{% endif %}>Overdue
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Date From</label>
+                        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Date To</label>
+                        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{% url 'manage_billing' %}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="cine-glass p-4 cine-reveal">
+                <div class="table-responsive">
+                    <table class="table cine-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Bill #</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Total</th>
+                                <th>Paid</th>
+                                <th>Due</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in bills %}
+                            <tr>
+                                <td class="text-white fw-semibold">{{ b.bill_number }}</td>
+                                <td style="color:#8aa1bd;">{{ b.patient.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">{% if b.doctor %}Dr. {{ b.doctor.user.get_full_name }}{% else %}—{% endif %}</td>
+                                <td style="color:#10b981;">${{ b.total_amount|floatformat:2 }}</td>
+                                <td style="color:#22d3ee;">${{ b.paid_amount|floatformat:2 }}</td>
+                                <td class="{% if b.due_amount > 0 %}text-warning{% endif %}">${{ b.due_amount|floatformat:2 }}</td>
+                                <td>{% include 'partials/status_badge.html' with status=b.payment_status %}</td>
+                                <td>
+                                    <a href="{% url 'generate_bill_pdf' b.id %}" class="btn btn-sm btn-outline-info"
+                                        title="Download PDF">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4" style="color:#8aa1bd;">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>No bills found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if bills.has_other_pages %}
+                <nav class="mt-4" aria-label="Bills pagination">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if bills.has_previous %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ bills.previous_page_number }}">&laquo;</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link bg-info text-dark border-info">{{ bills.number }} / {{ bills.paginator.num_pages }}</span></li>
+                        {% if bills.has_next %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ bills.next_page_number }}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

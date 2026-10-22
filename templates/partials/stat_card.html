@@ -1,0 +1,17 @@
+
+<div class="cine-glass p-4 h-100 cine-reveal">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <p class="text-uppercase small mb-1" style="color:#8aa1bd;letter-spacing:.08em;">{{ label }}</p>
+            <h2 class="cine-stat-value mb-0" data-cine-count="{{ value|default:0 }}"
+                data-cine-decimals="{{ decimals|default:0 }}" data-cine-prefix="{{ prefix|default:'' }}"
+                data-cine-suffix="{{ suffix|default:'' }}" style="color:#{{ color|default:'22d3ee' }};">{{
+                value|default:0 }}</h2>
+            {% if subtitle %}<p class="small mb-0 mt-1" style="color:#8aa1bd;">{{ subtitle }}</p>{% endif %}
+        </div>
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+            style="width:56px;height:56px;background:rgba(34,211,238,0.12);">
+            <i class="bi bi-{{ icon|default:'graph-up' }} fs-4 cine-glow" style="color:#22d3ee;"></i>
+        </div>
+    </div>
+</div>

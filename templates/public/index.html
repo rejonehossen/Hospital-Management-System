@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}MediCare Hospital — Futuristic Medical Command Center{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="position-relative d-flex align-items-center" style="min-height:92vh;overflow:hidden;">
+    <canvas data-cine-three class="cine-hero-canvas" aria-hidden="true"></canvas>
+    <div class="cine-hero-content container py-5">
+        <div class="row">
+            <div class="col-lg-8">
+                <p class="text-uppercase small mb-3 cine-glow" style="color:#22d3ee;letter-spacing:.35em;">
+                    <i class="bi bi-shield-check me-2"></i>Advanced Medical Systems
+                </p>
+                <h1 class="display-2 fw-bold mb-4" style="line-height:1.05;">
+                    The Future of <span class="cine-grad-text">Healthcare</span><br>
+                    Is Operating Now.
+                </h1>
+                <p class="lead mb-4" style="color:#8aa1bd;max-width:640px;">
+                    Experience a new standard in hospital care — real-time patient insight,
+                    intelligent appointment scheduling, and next-generation clinical workflows.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'register' %}" class="btn btn-outline-info btn-lg px-4">
+                        <i class="bi bi-person-plus me-2"></i>Register
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- STATS -->
+<section class="container py-5">
+    <div class="row g-4">
+        <div class="col-6 col-lg-3">
+            {% include 'partials/stat_card.html' with icon="people-fill" label="Active Patients" value=stats.patients %}
+        </div>
+        <div class="col-6 col-lg-3">
+            {% include 'partials/stat_card.html' with icon="person-badge-fill" label="Expert Doctors" value=stats.doctors %}
+        </div>
+        <div class="col-6 col-lg-3">
+            {% include 'partials/stat_card.html' with icon="diagram-3-fill" label="Departments" value=stats.departments %}
+        </div>
+        <div class="col-6 col-lg-3">
+            {% include 'partials/stat_card.html' with icon="award-fill" label="Years Experience" value=stats.experience %}
+        </div>
+    </div>
+</section>
+
+<!-- DEPARTMENTS -->
+<section class="container py-5">
+    <div class="text-center mb-5 cine-reveal">
+        <h2 class="display-5 fw-bold mb-2">Our <span class="cine-grad-text">Departments</span></h2>
+        <p style="color:#8aa1bd;">Specialized care across all medical disciplines.</p>
+    </div>
+    <div class="row g-4">
+        {% for dept in departments %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{% url 'departments' %}" class="text-decoration-none">
+                <div class="cine-tilt-wrap">
+                    <div class="cine-tilt cine-glass p-4 h-100">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                style="width:52px;height:52px;background:rgba(34,211,238,0.12);">
+                                <i class="bi bi-{{ dept.icon|default:'heart-pulse' }} fs-4 cine-glow"
+                                    style="color:#22d3ee;"></i>
+                            </div>
+                            <h5 class="mb-0 text-white fw-semibold">{{ dept.name }}</h5>
+                        </div>
+                        <p class="small mb-2" style="color:#8aa1bd;">{{ dept.description|truncatewords:16 }}</p>
+                        <div class="small" style="color:#22d3ee;">
+                            <i class="bi bi-people me-1"></i>{{ dept.doctor_count }} doctors
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- DOCTORS -->
+<section class="container py-5">
+    <div class="d-flex justify-content-between align-items-end mb-4 cine-reveal">
+        <div>
+            <h2 class="display-5 fw-bold mb-2">Meet Our <span class="cine-grad-text">Specialists</span></h2>
+            <p class="mb-0" style="color:#8aa1bd;">Board-certified experts across every discipline.</p>
+        </div>
+        <a href="{% url 'doctor_list' %}" class="btn btn-outline-info">View All <i
+                class="bi bi-arrow-right ms-1"></i></a>
+    </div>
+    <div class="row g-4">
+        {% for doctor in doctors %}
+        <div class="col-sm-6 col-lg-3">
+            <a href="{% url 'doctor_detail' doctor.pk %}" class="text-decoration-none">
+                <div class="cine-glass p-4 h-100 text-center cine-reveal">
+                    {% if doctor.user.profile_picture %}
+                    <img src="{{ doctor.user.profile_picture.url }}" class="rounded-circle mb-3"
+                        style="width:88px;height:88px;object-fit:cover;" alt="{{ doctor.user.get_full_name }}">
+                    {% else %}
+                    <div class="rounded-circle bg-info bg-opacity-25 d-inline-flex align-items-center justify-content-center mb-3"
+                        style="width:88px;height:88px;">
+                        <i class="bi bi-person-fill fs-1" style="color:#22d3ee;"></i>
+                    </div>
+                    {% endif %}
+                    <h6 class="text-white fw-semibold mb-1">Dr. {{ doctor.user.get_full_name }}</h6>
+                    <p class="small mb-2" style="color:#22d3ee;">{{ doctor.specialization|default:doctor.qualification }}</p>
+                    <p class="small mb-0" style="color:#8aa1bd;">
+                        <i class="bi bi-building me-1"></i>{{ doctor.department.name|default:"General" }}
+                    </p>
+                    <div class="mt-2 small" style="color:#fbbf24;">
+                        <i class="bi bi-star-fill"></i>
+                        {{ doctor.average_rating|floatformat:1 }}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <p style="color:#8aa1bd;">No doctors available yet.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="container py-5">
+    <div class="cine-glass p-5 text-center cine-reveal">
+        <h2 class="display-6 fw-bold mb-3">Ready to experience <span class="cine-grad-text">next-gen care?</span></h2>
+        <p class="mb-4" style="color:#8aa1bd;">Book your appointment in under 60 seconds.</p>
+        <a href="{% if user.is_authenticated %}{% url 'book_appointment' %}{% else %}{% url 'register' %}{% endif %}"
+            class="btn btn-info btn-lg text-dark fw-semibold px-5">
+            <i class="bi bi-calendar-plus me-2"></i>Book Appointment
+        </a>
+    </div>
+
+</section>
+{% endblock %}

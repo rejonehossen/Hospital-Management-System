@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Manage Appointments — MediCare Admin{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">Manage <span class="cine-grad-text">Appointments</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">
+                    {{ stats.total }} total &middot; {{ stats.pending }} pending &middot; {{ stats.completed }}
+                    completed
+                </p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="cine-glass p-3 text-center">
+                        <div class="small" style="color:#8aa1bd;">Pending</div>
+                        <h4 class="mb-0" style="color:#fbbf24;">{{ stats.pending }}</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="cine-glass p-3 text-center">
+                        <div class="small" style="color:#8aa1bd;">Confirmed</div>
+                        <h4 class="mb-0" style="color:#22d3ee;">{{ stats.confirmed }}</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="cine-glass p-3 text-center">
+                        <div class="small" style="color:#8aa1bd;">Completed</div>
+                        <h4 class="mb-0" style="color:#10b981;">{{ stats.completed }}</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="cine-glass p-3 text-center">
+                        <div class="small" style="color:#8aa1bd;">Cancelled</div>
+                        <h4 class="mb-0" style="color:#ef4444;">{{ stats.cancelled }}</h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cine-glass p-3 mb-4 cine-reveal">
+                <form method="get" class="row g-2 align-items-end cine-form">
+                    <div class="col-md-2">
+                        <label class="form-label small">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending
+                            </option>
+                            <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed
+                            </option>
+                            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed
+                            </option>
+                            <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Date</label>
+                        <input type="date" name="date" class="form-control form-control-sm" value="{{ date_filter }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small">Doctor</label>
+                        <select name="doctor" class="form-select form-select-sm">
+                            <option value="">All Doctors</option>
+                            {% for d in doctors %}
+                            <option value="{{ d.id }}" {% if doctor_filter|stringformat:"s" == d.id|stringformat:"s" %}selected{% endif %}>
+                                Dr. {{ d.user.get_full_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-info btn-sm w-100 text-dark fw-semibold">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{% url 'manage_appointments' %}"
+                            class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="cine-glass p-4 cine-reveal">
+                <div class="table-responsive">
+                    <table class="table cine-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Department</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in appointments %}
+                            <tr>
+                                <td class="text-white">{{ a.patient.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">Dr. {{ a.doctor.user.get_full_name }}</td>
+                                <td style="color:#8aa1bd;">{{ a.department.name|default:"—" }}</td>
+                                <td style="color:#8aa1bd;">{{ a.date|date:"M d, Y" }}</td>
+                                <td style="color:#8aa1bd;">{{ a.time|time:"H:i" }}</td>
+                                <td>
+                                    {% if a.is_urgent %}<span class="badge bg-danger me-1">Urgent</span>{% endif %}
+                                    <span class="badge bg-secondary">{{ a.get_appointment_type_display }}</span>
+                                </td>
+                                <td>{% include 'partials/status_badge.html' with status=a.status %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4" style="color:#8aa1bd;">
+                                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>No appointments found.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if appointments.has_other_pages %}
+                <nav class="mt-4" aria-label="Appointments pagination">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if appointments.has_previous %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ appointments.previous_page_number }}">&laquo;</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link bg-info text-dark border-info">{{ appointments.number }} / {{ appointments.paginator.num_pages }}</span></li>
+                        {% if appointments.has_next %}
+                        <li class="page-item"><a class="page-link bg-dark border-secondary text-info"
+                                href="?page={{ appointments.next_page_number }}">&raquo;</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

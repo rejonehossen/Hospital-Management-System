@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}About — MediCare{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="text-center mb-5 cine-reveal">
+        <p class="text-uppercase small mb-2 cine-glow" style="color:#22d3ee;letter-spacing:.35em;">Our Story</p>
+        <h1 class="display-3 fw-bold mb-3">Built for the <span class="cine-grad-text">Next Century</span></h1>
+        <p class="lead mx-auto" style="color:#8aa1bd;max-width:720px;">
+            {{ hospital_name }} fuses world-class clinical expertise with next-generation
+            technology to deliver care that is precise, personal, and profoundly human.
+        </p>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="cine-glass p-4 h-100 cine-reveal">
+                <div class="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                    style="width:56px;height:56px;background:rgba(34,211,238,0.12);">
+                    <i class="bi bi-bullseye fs-4 cine-glow" style="color:#22d3ee;"></i>
+                </div>
+                <h5 class="text-white fw-semibold">Our Mission</h5>
+                <p class="small mb-0" style="color:#8aa1bd;">
+                    To make advanced, evidence-based healthcare accessible, transparent, and human.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="cine-glass p-4 h-100 cine-reveal">
+                <div class="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                    style="width:56px;height:56px;background:rgba(139,92,246,0.14);">
+                    <i class="bi bi-eye fs-4 cine-glow-violet" style="color:#8b5cf6;"></i>
+                </div>
+                <h5 class="text-white fw-semibold">Our Vision</h5>
+                <p class="small mb-0" style="color:#8aa1bd;">
+                    A hospital that feels less like an institution and more like a precision-engineered care system.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="cine-glass p-4 h-100 cine-reveal">
+                <div class="rounded-circle d-flex align-items-center justify-content-center mb-3"
+                    style="width:56px;height:56px;background:rgba(16,185,129,0.14);">
+                    <i class="bi bi-gem fs-4" style="color:#10b981;"></i>
+                </div>
+                <h5 class="text-white fw-semibold">Our Values</h5>
+                <p class="small mb-0" style="color:#8aa1bd;">
+                    Trust, precision, empathy, and relentless improvement — in every interaction.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="cine-glass p-5 cine-reveal">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-7">
+                <h2 class="fw-bold mb-3">Two decades of <span class="cine-grad-text">clinical excellence</span></h2>
+                <p style="color:#8aa1bd;">
+                    From a single consultation room to a fully integrated medical ecosystem, our team
+                    has grown into a network of specialists, technologists, and caregivers united by
+                    one obsession: giving patients their best possible outcome.
+                </p>
+                <p class="mb-0" style="color:#8aa1bd;">
+                    Every process — from triage to discharge — is instrumented, measured, and refined.
+                </p>
+            </div>
+            <div class="col-lg-5">
+                <div class="row g-3 text-center">
+                    <div class="col-6">
+                        <div class="cine-glass p-3">
+                            <h3 class="cine-grad-text mb-0" data-cine-count="20" data-cine-suffix="+">0</h3>
+                            <p class="small mb-0" style="color:#8aa1bd;">Years</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="cine-glass p-3">
+                            <h3 class="cine-grad-text mb-0" data-cine-count="120" data-cine-suffix="+">0</h3>
+                            <p class="small mb-0" style="color:#8aa1bd;">Doctors</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="cine-glass p-3">
+                            <h3 class="cine-grad-text mb-0" data-cine-count="50" data-cine-suffix="K+">0</h3>
+                            <p class="small mb-0" style="color:#8aa1bd;">Patients Served</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="cine-glass p-3">
+                            <h3 class="cine-grad-text mb-0" data-cine-count="10">0</h3>
+                            <p class="small mb-0" style="color:#8aa1bd;">Departments</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

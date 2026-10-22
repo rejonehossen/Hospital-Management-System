@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}My Profile — MediCare{% endblock %}
+
+{% block body %}
+<div class="d-flex">
+    {% include 'partials/sidebar.html' %}
+    <div class="flex-grow-1">
+        {% include 'partials/navbar.html' %}
+        <main class="p-4" data-cine-page>
+            {% include 'partials/messages.html' %}
+
+            <div class="mb-4 cine-reveal">
+                <h2 class="fw-bold mb-1">My <span class="cine-grad-text">Profile</span></h2>
+                <p class="mb-0 small" style="color:#8aa1bd;">Update your professional and personal information.</p>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    {% include 'partials/stat_card.html' with icon="calendar2-check" label="Appointments" value=stats.total_appointments %}
+                </div>
+                <div class="col-6 col-md-3">
+                    {% include 'partials/stat_card.html' with icon="people" label="Patients" value=stats.total_patients %}
+                </div>
+                <div class="col-6 col-md-3">
+                    {% include 'partials/stat_card.html' with icon="star" label="Rating" value=stats.average_rating decimals=1 %}
+                </div>
+                <div class="col-6 col-md-3">
+                    {% include 'partials/stat_card.html' with icon="check2-circle" label="Completion %" value=stats.completion_rate decimals=0 suffix="%" %}
+                </div>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="cine-form">
+                {% csrf_token %}
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="cine-glass p-4 h-100 cine-reveal">
+                            <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">Personal
+                                Info</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">First Name</label>{{ user_form.first_name }}</div>
+                                <div class="col-md-6"><label class="form-label">Last Name</label>{{ user_form.last_name }}</div>
+                                <div class="col-12"><label class="form-label">Email</label>{{ user_form.email }}</div>
+                                <div class="col-md-6"><label class="form-label">Phone</label>{{ user_form.phone }}</div>
+                                <div class="col-12"><label class="form-label">Address</label>{{ user_form.address }}
+                                </div>
+                                <div class="col-12"><label class="form-label">Profile Picture</label>{{ user_form.profile_picture }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="cine-glass p-4 h-100 cine-reveal">
+                            <h6 class="text-uppercase small mb-3" style="color:#8aa1bd;letter-spacing:.08em;">
+                                Professional Info</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">Department</label>{{ doctor_form.department }}</div>
+                                <div class="col-md-6"><label class="form-label">Qualification</label>{{ doctor_form.qualification }}</div>
+                                <div class="col-12"><label class="form-label">Specialization</label>{{ doctor_form.specialization }}</div>
+                                <div class="col-md-4"><label class="form-label">Experience</label>{{ doctor_form.experience }}</div>
+                                <div class="col-md-4"><label class="form-label">Fee</label>{{ doctor_form.consultation_fee }}</div>
+                                <div class="col-md-4"><label class="form-label">License</label>{{ doctor_form.license_number }}</div>
+                                <div class="col-md-6"><label class="form-label">Hours Start</label>{{ doctor_form.working_hours_start }}</div>
+                                <div class="col-md-6"><label class="form-label">Hours End</label>{{ doctor_form.working_hours_end }}</div>
+                                <div class="col-md-6"><label class="form-label">Max / Day</label>{{ doctor_form.max_patients_per_day }}</div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <div class="form-check">{{ doctor_form.is_available }}
+                                        <label class="form-check-label text-white" for="id_is_available">Currently
+                                            Available</label>
+                                    </div>
+                                </div>
+                                <div class="col-12"><label class="form-label">Bio</label>{{ doctor_form.bio }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-info text-dark fw-semibold px-4">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+{% endblock %}

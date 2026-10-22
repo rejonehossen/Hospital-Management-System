@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Billing & Discounts — MediCare{% endblock %}
+{% block body %}
+<div class="d-flex">
+  {% include 'partials/sidebar.html' %}
+  <div class="flex-grow-1">
+    {% include 'partials/navbar.html' %}
+    <main class="p-4" data-cine-page>
+      {% include 'partials/messages.html' %}
+
+      <h3 class="fw-bold mb-4 cine-reveal">Billing & <span class="cine-grad-text">Discounts</span></h3>
+
+      <div class="cine-glass p-4 cine-reveal">
+        <table class="table cine-table">
+          <thead><tr><th>Bill #</th><th>Patient</th><th>Total</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for b in bills %}
+            <tr>
+              <td class="text-white">{{ b.bill_number }}</td>
+              <td style="color:#8aa1bd;">{{ b.patient.user.get_full_name }}</td>
+              <td class="text-success">${{ b.total_amount }}</td>
+              <td class="{% if b.due_amount > 0 %}text-warning{% endif %}">${{ b.due_amount }}</td>
+              <td>{% include 'partials/status_badge.html' with status=b.payment_status %}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#billModal{{ b.id }}">Apply Payment</button>
+
+                <!-- Modal -->
+                <div class="modal fade cine-modal" id="billModal{{ b.id }}" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <form method="post" class="cine-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="bill_id" value="{{ b.id }}">
+                        <div class="modal-header"><h5 class="modal-title">Process Payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                          <p class="small text-muted mb-3">Total Bill: ${{ b.total_amount }}</p>
+                          <div class="mb-3"><label class="form-label">Apply Discount ($)</label><input type="number" step="0.01" name="discount_amount" class="form-control" value="{{ b.discount|default:0 }}"></div>
+                          <div class="mb-0"><label class="form-label">Amount Paid ($)</label><input type="number" step="0.01" name="paid_amount" class="form-control" value="{{ b.paid_amount|default:0 }}"></div>
+                        </div>
+                        <div class="modal-footer"><button type="submit" class="btn btn-info text-dark fw-bold">Update Bill</button></div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}<tr><td colspan="6" class="text-center py-4 text-muted">No bills found.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

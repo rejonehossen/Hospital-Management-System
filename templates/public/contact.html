@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Contact — MediCare{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="row g-5">
+        <div class="col-lg-5 cine-reveal">
+            <p class="text-uppercase small mb-2 cine-glow" style="color:#22d3ee;letter-spacing:.35em;">Reach Out</p>
+            <h1 class="display-4 fw-bold mb-4">Let's <span class="cine-grad-text">Talk</span></h1>
+            <p style="color:#8aa1bd;">
+                Have a question or want to book a visit? Our team is here to help.
+            </p>
+
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-geo-alt-fill fs-5" style="color:#22d3ee;"></i>
+                <div>
+                    <div class="text-white fw-semibold">Address</div>
+                    <div class="small" style="color:#8aa1bd;">{{ hospital_address }}</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-telephone-fill fs-5" style="color:#22d3ee;"></i>
+                <div>
+                    <div class="text-white fw-semibold">Phone</div>
+                    <div class="small" style="color:#8aa1bd;">{{ hospital_phone }}</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-envelope-fill fs-5" style="color:#22d3ee;"></i>
+                <div>
+                    <div class="text-white fw-semibold">Email</div>
+                    <div class="small" style="color:#8aa1bd;">{{ hospital_email }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 cine-reveal">
+            <div class="cine-glass p-4 p-md-5">
+                <h4 class="fw-semibold mb-4">Send a Message</h4>
+                <form method="post" class="cine-form">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Your Name</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone (optional)</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Subject</label>
+                            {{ form.subject }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Message</label>
+                            {{ form.message }}
+                        </div>
+                    </div>
+                    {% if form.errors %}
+                    <div class="alert alert-danger small py-2 mt-3">Please fix the errors above.</div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-info text-dark fw-semibold mt-4 w-100 py-2">
+                        <i class="bi bi-send me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
